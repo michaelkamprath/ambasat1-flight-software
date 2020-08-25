@@ -4,6 +4,13 @@
 #include <Adafruit_Sensor.h>  // not used in this demo but required!
 #include <TinyLoRa.h>
 
+// 
+// This code is currently essentially a copy of the Adafruit_LSM9DS1 library example:
+//    https://github.com/adafruit/Adafruit_LSM9DS1/blob/master/examples/lsm9ds1/lsm9ds1.ino
+// which was pblished under the BSD license and Copyright (c) 2020 Kevin (KTOWN) Townsend for Adafruit Industries
+// All rights reserved.
+//
+
 // i2c
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 
