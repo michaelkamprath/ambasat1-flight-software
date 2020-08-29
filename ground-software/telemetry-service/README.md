@@ -1,5 +1,5 @@
 # Telemetry Service
-This is a dead simple web service to be used with The Things Network to recieve telemetry from TTN applications, notably the AmbaSat satellite, though this could be used for any TTN application. This service has been packaged as a Docker container, making it easy to build and deploy anywhere.
+This is a dead simple web service to be used with [The Things Network](https://www.thethingsnetwork.org) to recieve telemetry from TTN applications via a [HTTP integration](https://www.thethingsnetwork.org/docs/applications/http/). This service was originaly designed for the AmbaSat satellite, though this could be used for any TTN application. This service has been packaged as a Docker container, making it easy to build and deploy anywhere.
 
 ## Launching Web Service
 To launch the webservice, use the included shell script:
@@ -18,7 +18,7 @@ docker run -d  \
 Where `DATA_FILE_DIR` is the directory in which to save data and `SERVICE_PORT` is the port the web service should listen on.
 
 ## TTN Integration
-Set up in TTN by adding a `HTTP Integration` to your application. The URL should be:
+Set up in TTN by adding a [HTTP Integration](https://www.thethingsnetwork.org/docs/applications/http/) to your application. The URL should be:
 ```
 http://your_ip_address:8000/telemetry/dataset_name
 ```
