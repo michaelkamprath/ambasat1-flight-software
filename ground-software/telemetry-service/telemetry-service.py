@@ -12,7 +12,7 @@ def clean_project_name(project):
 @get('/telemetry/<project>')
 def return_telemetry(project):
     cleaned_project = clean_project_name(project)
-    print('Downloading telemetry file for \'{0}\''.format(cleaned_porject))
+    print('Downloading telemetry file for \'{0}\''.format(cleaned_project))
     return static_file('{0}.{1}'.format(cleaned_project, DATE_FILE_EXTENSION), root=DATA_FILE_DIR)
         
 
