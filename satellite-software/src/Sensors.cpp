@@ -74,8 +74,12 @@ VoltageSensor::getCurrentMeasurementBuffer(void)
 // LSM9DS1Sensor
 //
 
+
 LSM9DS1Sensor::LSM9DS1Sensor()
-    :   _lsm()
+    :   _lsm(),
+        _accelConfig(ACCELERATION_SENSITIVITY_2G),
+        _gyroConfig(GYRO_SENSITIVITY_245DPS),
+        _magConfig(MAGNETIC_SENSITIVITY_4GAUSS)
 {
     // Try to initialise and warn if we couldn't detect the chip
     if (!_lsm.begin())
@@ -85,28 +89,56 @@ LSM9DS1Sensor::LSM9DS1Sensor()
     }
     Serial.println("Found LSM9DS1 9DOF");
 
-    // TODO - make these configurations configurable by satellite command
-
-    // 1.) Set the accelerometer range
-    _lsm.setupAccel(_lsm.LSM9DS1_ACCELRANGE_2G);
-    //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_4G);
-    //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_8G);
-    //lsm.setupAccel(lsm.LSM9DS1_ACCELRANGE_16G);
-
-    // 2.) Set the magnetometer sensitivity
-    _lsm.setupMag(_lsm.LSM9DS1_MAGGAIN_4GAUSS);
-    //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_8GAUSS);
-    //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_12GAUSS);
-    //lsm.setupMag(lsm.LSM9DS1_MAGGAIN_16GAUSS);
-
-    // 3.) Setup the gyroscope
-    _lsm.setupGyro(_lsm.LSM9DS1_GYROSCALE_245DPS);
-    //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_500DPS);
-    //lsm.setupGyro(lsm.LSM9DS1_GYROSCALE_2000DPS);
-}
+ }
 
 LSM9DS1Sensor::~LSM9DS1Sensor()
 {
+}
+
+void LSM9DS1Sensor::setSensorConfig(void)
+{
+    // TODO - make these configurations configurable by satellite command
+
+    switch(_accelConfig) {
+        case ACCELERATION_SENSITIVITY_2G:
+            _lsm.setupAccel(_lsm.LSM9DS1_ACCELRANGE_2G);
+            break;
+        case ACCELERATION_SENSITIVITY_4G:
+             _lsm.setupAccel(_lsm.LSM9DS1_ACCELRANGE_4G);
+            break;
+        case ACCELERATION_SENSITIVITY_8G:
+             _lsm.setupAccel(_lsm.LSM9DS1_ACCELRANGE_8G);
+            break;
+        case ACCELERATION_SENSITIVITY_16G:
+             _lsm.setupAccel(_lsm.LSM9DS1_ACCELRANGE_16G);
+            break;
+    }
+    switch(_gyroConfig) {
+        case GYRO_SENSITIVITY_245DPS:
+            _lsm.setupGyro(_lsm.LSM9DS1_GYROSCALE_245DPS);
+            break;
+        case GYRO_SENSITIVITY_500DPS:
+            _lsm.setupGyro(_lsm.LSM9DS1_GYROSCALE_500DPS);
+            break;
+        case GYRO_SENSITIVITY_2000DPS:
+            _lsm.setupGyro(_lsm.LSM9DS1_GYROSCALE_2000DPS);
+            break;
+    }
+
+    switch(_magConfig) {
+        case MAGNETIC_SENSITIVITY_4GAUSS:
+            _lsm.setupMag(_lsm.LSM9DS1_MAGGAIN_4GAUSS);
+            break;
+        case MAGNETIC_SENSITIVITY_8GAUSS:
+            _lsm.setupMag(_lsm.LSM9DS1_MAGGAIN_8GAUSS);
+            break;
+        case MAGNETIC_SENSITIVITY_12GAUSS:
+            _lsm.setupMag(_lsm.LSM9DS1_MAGGAIN_12GAUSS);
+            break;
+        case MAGNETIC_SENSITIVITY_16GAUSS:
+            _lsm.setupMag(_lsm.LSM9DS1_MAGGAIN_16GAUSS);
+            break;
+    }
 }
 
 void LSM9DS1Sensor::setSensorValueAtBufferLocation(float sensor_value, uint8_t index)
@@ -126,7 +158,7 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
 
     _lsm.read();
 
-    // Buffer format (TOTAL bytes = 18)
+    // Buffer format (TOTAL bytes = 21)
     //      type        value           buffer index
     //      ==============================================
     //      int16_t     accelData.x     0
@@ -138,6 +170,9 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
     //      int16_t     magData.x       12
     //      int16_t     magData.y       14
     //      int16_t     magData.z       16
+    //      uint4_t     _accelConfig    18-low
+    //      uint4_t     _gyroConfig     18-high
+    //      uint4_t     _magConfig      19-low
     //
     // While the AdaFruit library stores the above values in floats, they are
     // actually sourced from int16_t values. Converting back to int16_t should
@@ -152,6 +187,9 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
     setSensorValueAtBufferLocation(_lsm.magData.x, 12);
     setSensorValueAtBufferLocation(_lsm.magData.y, 14);
     setSensorValueAtBufferLocation(_lsm.magData.z, 16);
-
+    _buffer[18] = (uint8_t)_accelConfig;
+    _buffer[18] |= (uint8_t)_gyroConfig;
+    _buffer[19] = (uint8_t)_magConfig;
+   
     return _buffer;
 }

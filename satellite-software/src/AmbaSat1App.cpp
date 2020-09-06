@@ -24,9 +24,7 @@ void AmbaSat1App::setup()
 void AmbaSat1App::loop() 
 {
     // DEMO - get and print sensor buffers
-
-    const uint8_t* bufferPtr = nullptr;
-
+    
     Serial.print(F("Voltage buffer = "));
     print_buffer(
         _voltSensor.getCurrentMeasurementBuffer(),
