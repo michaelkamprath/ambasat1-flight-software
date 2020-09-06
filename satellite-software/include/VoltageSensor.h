@@ -10,6 +10,7 @@ class VoltageSensor : public SensorBase {
 private:
     uint8_t _buffer[2];
 
+    int16_t readVccMilliVolts(void) const;
 public:
     VoltageSensor();
     virtual ~VoltageSensor();
