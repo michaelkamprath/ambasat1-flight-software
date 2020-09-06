@@ -156,6 +156,11 @@ void AmbaSat1App::sendSensorPayload(SensorBase& sensor, uint8_t port )
     }
 
     const uint8_t* data_ptr = sensor.getCurrentMeasurementBuffer();
+
+    if (data_ptr == nullptr) {
+        Serial.println(F("Sensor data is NULL."));
+        return;
+    }
     LMIC_setTxData2(
         port,
         (xref2u1_t)data_ptr,

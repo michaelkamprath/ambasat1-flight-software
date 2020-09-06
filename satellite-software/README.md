@@ -8,11 +8,11 @@ This repository contains the flight software for the AmbaSat-1 developped my Mic
 ## How to Use
 This software is ready to go for the AmbaSat basic sensors, Voltage and LSM9DS1, with minimal set up. To build this software for your AmbaSat-1, first do the following:
 
-1. Set the Network Session Key, LoRaWAN AppSKey, and the LoRaWAN end-device address values in the `AmbaSat1Config.h` header file. Find instructions for obtaining these values for ABP activation at The Things Network site. Do not check this editted file into source control, as these values should be treated as secrets.
-2. Change the radio frequency configuration in the `platformio.ini` file. If you are using the USA frequency plan of 915 MHz, the frequency configuration should be `CFG_us915`. If you are using the radio provided in the AmbaSat-1 kits, which use the European frequency plan of 868 MHz, the frequency configuration should be `CFG_eu868`. Note that the version of your satellite that will launch will likely have the European frequency plan radio and the flight software should be configured for that when finalizing your satellite.
-3. Set the `monitor_port` and `upload_port` options in the `platformio.ini` file to the USB device for your AmbaSat-1 satellite.
+1. Set up an application in your The Things Network account. Create a sensor, which will be the AmbaSat-1. Sent this sensor up for ABP. Note that a decoder to use in your The Things Network application configuation is [provided elsewhere in this repository](../ground-software/ttn-payload-decoders/payload-decoders.js).
+2. Set the Network Session Key, LoRaWAN AppSKey, and the LoRaWAN end-device address values in the `AmbaSat1Config.h` header file. Find instructions for obtaining these values for ABP activation at The Things Network site. Do not check this editted file into source control, as these values should be treated as secrets.
+3. Change the radio frequency configuration in the `platformio.ini` file. If you are using the USA frequency plan of 915 MHz, the frequency configuration should be `CFG_us915`. If you are using the radio provided in the AmbaSat-1 kits, which use the European frequency plan of 868 MHz, the frequency configuration should be `CFG_eu868`. Note that the version of your satellite that will launch will likely have the European frequency plan radio and the flight software should be configured for that when finalizing your satellite.
+4. Set the `monitor_port` and `upload_port` options in the `platformio.ini` file to the USB device for your AmbaSat-1 satellite.
 
-You will also need to set up an application in your The Things Network account. Note that a decordr to use in your The Things Network application configuation is [provided elsewhere in this repository](../ground-software/ttn-payload-decoders/payload-decoders.js).
 
 # Design
 Below are the intended requirements for the finalized AmbaSat-1 flight software. This is very much a `Work in Progress`.

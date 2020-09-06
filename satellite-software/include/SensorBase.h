@@ -12,7 +12,7 @@ public:
     virtual void setup(void)    {}
 
     // This functions is expected to get a current sensor measurement
-    // the fill a byte buffer that weill be transmitted via the 
+    // then fill a byte buffer that will be transmitted via the 
     // LoRaWAN radio. It is the sensor's responsibility to define the
     // the buffer format for it's measurement. 
     // IMPORTANT: Returns NULL if sensor read was not successful.
