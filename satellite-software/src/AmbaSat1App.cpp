@@ -17,14 +17,14 @@ AmbaSat1App::~AmbaSat1App()
 
 void AmbaSat1App::setup()
 {
-    // most set up was done during construction
-
+    _voltSensor.setup();
+    _lsm9DS1Sensor.setup();
 }
 
 void AmbaSat1App::loop() 
 {
     // DEMO - get and print sensor buffers
-    
+
     Serial.print(F("Voltage buffer = "));
     print_buffer(
         _voltSensor.getCurrentMeasurementBuffer(),

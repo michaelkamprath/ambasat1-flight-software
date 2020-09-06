@@ -1,79 +1,9 @@
-#include <Wire.h>
-#include "Sensors.h"
+#include "LSM9DS1Sensor.h"
 #include "Utilities.h"
-
-bool SensorBase::_isI2CSetUp = false;
-
-SensorBase::SensorBase()
-{
-    if (!_isI2CSetUp) {
-        Serial.println("Begin Wire");
-        Wire.begin(); //I'm the master
-        delay(25); // Sensor06 has a startup time of 25ms as per the data sheet
-        // Global I2C reset
-        Serial.println("Global I2C reset");
-        Wire.beginTransmission(0x06); // global i2c reset address
-        Wire.endTransmission(); 
-
-        _isI2CSetUp = true;
-    }
-
-}
-
-SensorBase::~SensorBase()
-{
-
-}
-
-//
-// Voltage Sensor
-//
-
-VoltageSensor::VoltageSensor()
-{
-
-}
-
-VoltageSensor::~VoltageSensor()
-{
-
-}
-
-const uint8_t* 
-VoltageSensor::getCurrentMeasurementBuffer(void)
-{
-    // Read 1.1V reference against AVcc
-    // set the reference to Vcc and the measurement to the internal 1.1V reference
-#if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-    ADMUX = _BV(REFS0) | _BV(MUX4) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-#elif defined (__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
-    ADMUX = _BV(MUX5) | _BV(MUX0);
-#elif defined (__AVR_ATtiny25__) || defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
-    ADMUX = _BV(MUX3) | _BV(MUX2);
-#else
-    ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-#endif
-
-    delay(2); // Wait for Vref to settle
-    ADCSRA |= _BV(ADSC); // Start conversion
-    while (bit_is_set(ADCSRA,ADSC)); // measuring
-
-    uint8_t low  = ADCL; // must read ADCL first - it then locks ADCH
-    uint8_t high = ADCH; // unlocks both
-
-    int32_t volts = 1125300L / ((high<<8) | low);
-    int16_t volts_int16 = volts < 32767 ? volts : 32767;
-
-    // put results in buffer and return
-    hton_int16(volts_int16, _buffer);
-
-    return _buffer;
-}
 
 //
 // LSM9DS1Sensor
 //
-
 
 LSM9DS1Sensor::LSM9DS1Sensor()
     :   _lsm(),

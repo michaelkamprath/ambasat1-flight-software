@@ -21,7 +21,7 @@ function DecodeVoltage(bytes) {
 	var volts = convertBytesToSignedInt(bytes[0], bytes[1]);
 	
 	return {
-		milliVolts: volts
+		milli_volts: volts
 	};
 }
 
