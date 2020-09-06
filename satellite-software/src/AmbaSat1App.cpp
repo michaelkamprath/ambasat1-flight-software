@@ -127,6 +127,7 @@ void AmbaSat1App::setup()
 
 void AmbaSat1App::loop() 
 {
+    digitalWrite(LED_PIN, HIGH);
     Serial.println(F("Transmitting voltage sensor."));
     sendSensorPayload(_voltSensor, 1);
     while(!_sleeping) {
@@ -139,6 +140,7 @@ void AmbaSat1App::loop()
         os_runloop_once();
     }
     _sleeping = false;
+    digitalWrite(LED_PIN, LOW);
     for (int i=0; i < SLEEPCYCLES; i++)
     {
         LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);    //sleep 8 seconds * sleepcycles
@@ -179,8 +181,6 @@ void initfunc(osjob_t* j)
     // reset MAC state
     LMIC_reset();
 
-    // start joining
-    LMIC_startJoining();
     // init done - onEvent() callback will be invoked...
 }
 

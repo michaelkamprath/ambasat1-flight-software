@@ -5,6 +5,17 @@ This repository contains the flight software for the AmbaSat-1 developped my Mic
 * Robustness - Space is a harsh operating environement. Furthermore, launches can jostle satellites and break components. I want my satellite to do the best it can despite damage incured during ascent or in orbit. This means being tolerant of sensor failures and even doing on board testing.  Of course, software can't compensate for catrosophic hardware failures, but the software should strive to maximize data recieved by working around a malfunctioning sensor (if it has one).
 * Keep the Code clean and Understandable - Software that is built from example code that itself was copy and pasted from other examples has a way of getting messy with vestigial code that serves no purpose. The goal here is to build the software from the up purpose built for the AmbaSat-1.
 
+## How to Use
+This software is ready to go for the AmbaSat basic sensors, Voltage and LSM9DS1, with minimal set up. To build this software for your AmbaSat-1, first do the following:
+
+1. Set the Network Session Key, LoRaWAN AppSKey, and the LoRaWAN end-device address values in the `AmbaSat1Config.h` header file. Find instructions for obtained this values for ABP activation at The Things Network site. Do not check this editted file into source control, as these values should be treated as secrets.
+2. Change the radio frequency configuration in the `platformio.ini` file. If you are using the USA frequency plan of 915 MHz, the frequency configuration should be `CFG_us915`. If you are using the radio provided in the AmbaSat-1 kits, which are the European model for 868 MHz, the frequency configuration should be `CFG_eu868`. Note that the version of your satellite that will get launch will likely have the European frequency plan radio and the flight software should be configured for that when finalizing your satellite.
+
+You will also need to set up an application in your The Things Network account. Note that a decordr to use in your The Things Network application configuation is [provided elsewhere in this repository](../ground-software/ttn-payload-decoders/payload-decoders.js).
+
+# Design
+Below are the intended requirements for the finalized AmbaSat-1 flight software. This is very much a `Work in Progress`.
+
 ## Requirements
 
 ### Telemetry and Status Uplinks
@@ -42,10 +53,10 @@ This command will have a second byte that represents the minimum number of 8 sec
 
 #### Reset Downlink Counter
 
+#### Sensor Sensitivity Adjustment
+
 #### Blink LED
 Because the aliens in space like blinking lights too. The command sensor port indicator is ignored, and a second byte is used to indicate the number of times the LED should be blinked. 
-
-
 
 ## Design Issues
 
@@ -63,11 +74,12 @@ In an effort to keep the code footprint small, the following actions are taken:
 ** `DISABLE_BEACONS`
 ** `DISABLE_MCMD_PING_SET`
 ** `DISABLE_MCMD_BCNI_ANS`
-* **Wrap `Serial.print()` in a macro - In order to remove serial prints that are only really intended for debugging, a macro should be used that will allow the print statements to be compiled out in the flight build.
+* **Wrap `Serial.print()` in a macro** - In order to remove serial prints that are only really intended for debugging, a macro should be used that will allow the print statements to be compiled out in the flight build.
+* **Unused sensor code not compiled** - Though this software is intended to be general purpose accross all sensor types, only the configured sensor should compiled and linked when building. This will be accomplish through compiler macros.
 
 
 ### Radition Hardness
-Given the space environment, I would expect bits to get flipped due to the radition. I supposed there isn't much we can do about this given the low cost nature of the AmbaSat. However, we can implement some simple data integretity checks .
+Given the space environment, I would expect bits to get flipped due to the radition. I supposed there isn't much we can do about this given the low cost nature of the AmbaSat. However, we can implement some simple data integretity checks. `TBD`
 
 ## References
 The following articles and documents are useful when designing this software
