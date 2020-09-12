@@ -1,6 +1,12 @@
 #include <Arduino.h>
 #include "Si1132Sensor.h"
 
+//
+// TODO:
+//  - Load calibration data from device and apply for more accurate measurements
+//  - Create sensitivity configurations to allow for easy adjustments under various conditions.
+//
+
 #define SI1132_PART_ID_REG          0x00
 #define SI1132_REV_ID_REG           0x01
 #define SI1132_SEQ_ID_REG           0x02
@@ -91,7 +97,7 @@ bool Si1132Sensor::begin(void)
     Serial.print(F("\n"));
 
     if (sequence_id == 0x01) {
-        // deal with a software bug in sequence 0x01 models
+        // deal with a device-level software bug in sequence=0x01 models as documented in spec
         _MEAS_RATE0 = 0x0A;
         _MEAS_RATE1 = 0x08;
     }
@@ -110,11 +116,7 @@ void Si1132Sensor::setup(void)
     writeRegister(SI1132_UCOEF1_REG, 0x6B);
     writeRegister(SI1132_UCOEF2_REG, 0x01);
     writeRegister(SI1132_UCOEF3_REG, 0x00);
-    // writeRegister(SI1132_ADDRESS, SI1132_UCOEF0_REG, 0x29);
-    // writeRegister(SI1132_ADDRESS, SI1132_UCOEF1_REG, 0x89);
-    // writeRegister(SI1132_ADDRESS, SI1132_UCOEF2_REG, 0x02);
-    // writeRegister(SI1132_ADDRESS, SI1132_UCOEF3_REG, 0x00);
-
+ 
     uint8_t param_res = 0;
 
     // turn on UV Index, ALS IR, and ALS Visible
@@ -135,7 +137,7 @@ void Si1132Sensor::setup(void)
     setParameter(SI1132_PARAM_ALS_IR_ADC_COUNTER, 0b01110000);
     //  small IR photodiode
     setParameter(SI1132_PARAM_ALS_IR_ADCMUX, 0x00);
-    //  set IR_RANGE bit for high signal. Must due "read and modify" per spec
+    //  set IR_RANGE bit for high signal. Must do "read and modify" per spec
     // uint8_t cur_value = readParameter(SI1132_PARAM_ALS_IR_ADC_MISC)
     // param_res = setParameter(SI1132_PARAM_ALS_IR_ADC_MISC, 0b00100000|cur_value);
 
@@ -237,7 +239,7 @@ const uint8_t* Si1132Sensor::getCurrentMeasurementBuffer(void)
     // wait for measurements
     delay(1000);
     
-    // Note that network order is big enfian. Arrange byes accordingly.
+    // Note that network order is big endian. Arrange bytes accordingly.
     uint8_t localBuffer[4];
 
     // UV
