@@ -34,14 +34,35 @@ int SensorBase::readRegister(uint8_t deviceAddress, uint8_t address)
     Wire.beginTransmission(deviceAddress);
     Wire.write(address);
     if (Wire.endTransmission() != 0) {
-        return -1;
+        Serial.print(F("ERROR ending transmission #1 - readRegister( 0x"));
+        Serial.print(deviceAddress, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print(address, HEX);
+        Serial.print(F(" )\n"));
+       return -1;
     }
 
     if (Wire.requestFrom(deviceAddress, (uint8_t)1) != 1) {
+        Serial.print(F("ERROR requesting data - readRegister( 0x"));
+        Serial.print(deviceAddress, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print(address, HEX);
+        Serial.print(F(" )\n"));
         return -1;
     }
 
-    return Wire.read();
+    int value = Wire.read();
+
+    if (Wire.endTransmission() != 0) {
+        Serial.print(F("ERROR ending transmission #2 - readRegister( 0x"));
+        Serial.print(deviceAddress, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print(address, HEX);
+        Serial.print(F(" )\n"));
+        return -1;
+    }
+
+    return value;
 }
 
 int SensorBase::readRegisters(uint8_t deviceAddress, uint8_t address, uint8_t* data, size_t length)
@@ -57,10 +78,28 @@ int SensorBase::readRegisters(uint8_t deviceAddress, uint8_t address, uint8_t* d
     }
     Wire.write(autoIncrementBit | address);
     if (Wire.endTransmission(false) != 0) {
+        Serial.print(F("ERROR ending transmission #1 - readRegister( 0x"));
+        Serial.print(deviceAddress, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print(address, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print((size_t)data, HEX);
+        Serial.print(F(", "));
+        Serial.print(length);
+        Serial.print(F(" )\n"));
         return -1;
     }
 
     if (Wire.requestFrom(deviceAddress, length) != length) {
+        Serial.print(F("ERROR requesting data - readRegister( 0x"));
+        Serial.print(deviceAddress, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print(address, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print((size_t)data, HEX);
+        Serial.print(F(", "));
+        Serial.print(length);
+        Serial.print(F(" )\n"));
         return 0;
     }
 
@@ -69,6 +108,15 @@ int SensorBase::readRegisters(uint8_t deviceAddress, uint8_t address, uint8_t* d
     }
 
     if (Wire.endTransmission() != 0) {
+        Serial.print(F("ERROR ending transmission #2 - readRegister( 0x"));
+        Serial.print(deviceAddress, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print(address, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print((size_t)data, HEX);
+        Serial.print(F(", "));
+        Serial.print(length);
+        Serial.print(F(" )\n"));
         return -1;
     }
     return 1;
@@ -84,6 +132,13 @@ int SensorBase::writeRegister(uint8_t deviceAddress, uint8_t address, uint8_t va
     Wire.write(address);
     Wire.write(value);
     if (Wire.endTransmission() != 0) {
+        Serial.print(F("ERROR ending transmission - writeRegister( 0x"));
+        Serial.print(deviceAddress, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print(address, HEX);
+        Serial.print(F(", 0x"));
+        Serial.print(value, HEX);
+        Serial.print(F(" )\n"));
         return 0;
     }
 

@@ -166,15 +166,26 @@ uint8_t Si1132Sensor::readResponseRegister(void)
 
 bool Si1132Sensor::sendCommand(uint8_t cmd_value)
 {
-    // RANT
-    // If you were to say "hey, this is not what the Si1132 documentations says is the proper
-    // command sending sequence", I would say "I tried that, It doesn't work. All sample code 
-    // does this. Go ahead and follow the documentation if you like. You'll be wasting 2 days
-    // of you life."
-    // /RANT
-    
-    // write command value
-    return writeRegister(SI1132_COMMAND_REG, cmd_value);
+    writeRegister(SI1132_COMMAND_REG, 0x00);
+    uint8_t response = readResponseRegister();
+    while (response != 0x00) {
+        writeRegister(SI1132_COMMAND_REG, 0x00);
+        delay(5);
+        response = readResponseRegister();
+    }
+    if (!writeRegister(SI1132_COMMAND_REG, cmd_value)) {
+         Serial.print(F("\n    ERROR writing to command register"));
+         return false;
+    }
+    int16_t counter = 0;
+    response = readResponseRegister();
+    while ((counter < 10) && (response == 0x00)) {
+        writeRegister(SI1132_COMMAND_REG, cmd_value);
+        delay(5);
+        response = readResponseRegister();
+        counter++;
+    }
+    return (response != 0x00);
 }
 
 uint8_t Si1132Sensor::setParameter(uint8_t param, uint8_t value)
