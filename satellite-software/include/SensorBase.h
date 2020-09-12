@@ -19,6 +19,13 @@ public:
     virtual const uint8_t* getCurrentMeasurementBuffer(void) = 0;
 
     virtual uint8_t getMeasurementBufferSize() const = 0;
+
+    //
+    // I2C methods
+    //
+    int writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value);
+    int readRegister(uint8_t slaveAddress, uint8_t address);
+    int readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length);
 };
 
 

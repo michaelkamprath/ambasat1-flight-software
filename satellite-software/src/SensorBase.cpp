@@ -23,3 +23,49 @@ SensorBase::~SensorBase()
 {
 
 }
+
+int SensorBase::readRegister(uint8_t slaveAddress, uint8_t address)
+{
+    Wire.beginTransmission(slaveAddress);
+    Wire.write(address);
+    if (Wire.endTransmission() != 0) {
+        return -1;
+    }
+
+    if (Wire.requestFrom(slaveAddress, 1) != 1) {
+        return -1;
+    }
+
+    return Wire.read();
+}
+
+int SensorBase::readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length)
+{
+    Wire.beginTransmission(slaveAddress);
+    Wire.write(0x80 | address);
+    if (Wire.endTransmission(false) != 0) {
+        return -1;
+    }
+
+    if (Wire.requestFrom(slaveAddress, length) != length) {
+        return 0;
+    }
+
+    for (size_t i = 0; i < length; i++) {
+        *data++ = Wire.read();
+    }
+
+    return 1;
+}
+
+int SensorBase::writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value)
+{
+    Wire.beginTransmission(slaveAddress);
+    Wire.write(address);
+    Wire.write(value);
+    if (Wire.endTransmission() != 0) {
+        return 0;
+    }
+
+    return 1;
+}

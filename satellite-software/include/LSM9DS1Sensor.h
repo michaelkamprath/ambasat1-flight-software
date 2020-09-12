@@ -1,6 +1,5 @@
 #ifndef __LSM9DS1Sensor__
 #define __LSM9DS1Sensor__
-#include <Adafruit_LSM9DS1.h>
 #include "SensorBase.h"
 
 //
@@ -10,6 +9,7 @@
 class LSM9DS1Sensor : public SensorBase {
 public:
     typedef enum {
+        ACCELERATION_SENSITIVITY_OFF = 0x00,
         ACCELERATION_SENSITIVITY_2G = 0x01,
         ACCELERATION_SENSITIVITY_4G = 0x02,
         ACCELERATION_SENSITIVITY_8G = 0x03,
@@ -17,12 +17,15 @@ public:
     } AccelerationSensitivitySetting;
 
     typedef enum {
+        GYRO_SENSITIVITY_OFF = 0x00,
         GYRO_SENSITIVITY_245DPS = 0x10,
         GYRO_SENSITIVITY_500DPS = 0x20,
-        GYRO_SENSITIVITY_2000DPS = 0x30
+//        GYRO_SENSITIVITY_1000DPS = 0x30,
+        GYRO_SENSITIVITY_2000DPS = 0x40
     } GyroSensitivitySetting;
     
     typedef enum {
+        MAGNETIC_SENSITIVITY_OFF = 0x00,
         MAGNETIC_SENSITIVITY_4GAUSS = 0x01,
         MAGNETIC_SENSITIVITY_8GAUSS = 0x02,
         MAGNETIC_SENSITIVITY_12GAUSS = 0x03,
@@ -30,13 +33,20 @@ public:
     } MagneticSensitivitySetting;
 
 private:
-    Adafruit_LSM9DS1 _lsm;
     AccelerationSensitivitySetting _accelConfig;
     GyroSensitivitySetting _gyroConfig;
     MagneticSensitivitySetting _magConfig;   
 
     uint8_t _buffer[20];
+    bool _continuousMode;
 
+    bool begin(void);
+    void end(void);
+ 
+    int setAccelFS(AccelerationSensitivitySetting config);
+    int setGyroFS(GyroSensitivitySetting config);
+    int setMagnetFS(MagneticSensitivitySetting config);
+    
     void setSensorConfig(void);
     void setSensorValueAtBufferLocation(float sensor_value, uint8_t index);
 public:
