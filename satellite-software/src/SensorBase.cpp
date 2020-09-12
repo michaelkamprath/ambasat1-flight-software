@@ -25,30 +25,42 @@ SensorBase::~SensorBase()
 
 }
 
-int SensorBase::readRegister(uint8_t slaveAddress, uint8_t address)
+int SensorBase::readRegister(uint8_t deviceAddress, uint8_t address)
 {
-    Wire.beginTransmission(slaveAddress);
+    if (deviceAddress == 0xFF) {
+        // this is not a i2c sensor
+        return -1;
+    }
+    Wire.beginTransmission(deviceAddress);
     Wire.write(address);
     if (Wire.endTransmission() != 0) {
         return -1;
     }
 
-    if (Wire.requestFrom(slaveAddress, (uint8_t)1) != 1) {
+    if (Wire.requestFrom(deviceAddress, (uint8_t)1) != 1) {
         return -1;
     }
 
     return Wire.read();
 }
 
-int SensorBase::readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length)
+int SensorBase::readRegisters(uint8_t deviceAddress, uint8_t address, uint8_t* data, size_t length)
 {
-    Wire.beginTransmission(slaveAddress);
-    Wire.write(0x80 | address);
+    if (deviceAddress == 0xFF) {
+        // this is not a i2c sensor
+        return -1;
+    }
+    Wire.beginTransmission(deviceAddress);
+    uint8_t autoIncrementBit = 0x00;
+    if (i2cAutoIncrementBit() > 0 ) {
+        autoIncrementBit = 1 << i2cAutoIncrementBit();
+    }
+    Wire.write(autoIncrementBit | address);
     if (Wire.endTransmission(false) != 0) {
         return -1;
     }
 
-    if (Wire.requestFrom(slaveAddress, length) != length) {
+    if (Wire.requestFrom(deviceAddress, length) != length) {
         return 0;
     }
 
@@ -56,12 +68,19 @@ int SensorBase::readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* da
         *data++ = Wire.read();
     }
 
+    if (Wire.endTransmission() != 0) {
+        return -1;
+    }
     return 1;
 }
 
-int SensorBase::writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value)
+int SensorBase::writeRegister(uint8_t deviceAddress, uint8_t address, uint8_t value)
 {
-    Wire.beginTransmission(slaveAddress);
+    if (deviceAddress == 0xFF) {
+        // this is not a i2c sensor
+        return -1;
+    }
+    Wire.beginTransmission(deviceAddress);
     Wire.write(address);
     Wire.write(value);
     if (Wire.endTransmission() != 0) {

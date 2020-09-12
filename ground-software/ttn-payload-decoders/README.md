@@ -9,3 +9,4 @@ The decoder produces values the following units:
 | LSM9DS1 | 2 | Acceleration | Gs (1 = standard acceleration due to gravity) |
 | LSM9DS1 | 2 | Rotational Speed | Degrees per second |
 | LSM9DS1 | 2 | Magnetic Field | Gauss |
+| Si1132 | 8 | UV | Sun UV Index |

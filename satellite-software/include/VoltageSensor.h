@@ -11,6 +11,10 @@ private:
     uint8_t _buffer[2];
 
     int16_t readVccMilliVolts(void) const;
+
+protected:
+    // this sensor is not i2c
+    virtual uint8_t i2cDeviceAddress(void) const                        { return 0xFF; }
 public:
     VoltageSensor();
     virtual ~VoltageSensor();

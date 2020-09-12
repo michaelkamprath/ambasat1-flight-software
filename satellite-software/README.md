@@ -28,12 +28,12 @@ The LoRaWAN protocol affords different communication ports to allow for transmit
 |:-:|:--|:--|
 | 1 | Voltage Level | Also considered the "is alive" telemetry |
 | 2 | LSM9DS1 | Acceleration, Rotation, and Magnetic Field |
-| 3 | Sensor 1 | |
-| 4 | Sensor 2 | |
-| 5 | Sensor 3 | |
+| 3 | Sensor 1 - SHT30-DIS-F2.5KS | Humidity and Temperature |
+| 4 | Sensor 2 - STS21 | Temperature |
+| 5 | Sensor 3 - BME680 | Gas, Pressure, Temp & Humidity |
 | 6 | Sensor 4 | |
 | 7 | Sensor 5 | |
-| 8 | Sensor 6 | |
+| 8 | Sensor 6 - Si1132 | UV Light Sensor |
 | 9 | Sensor 7 | |
 | 10 | Sensor 8 | |
 | 11 | CMD Status | Report the status of a command request |

@@ -5,6 +5,7 @@
 //
 // LSM9DS1 Sensor
 //
+#define LSM9DS1_ADDRESS            0x6b
 
 class LSM9DS1Sensor : public SensorBase {
 public:
@@ -49,6 +50,12 @@ private:
     
     void setSensorConfig(void);
     void setSensorValueAtBufferLocation(float sensor_value, uint8_t index);
+protected:
+
+    // this only works for the acceleration and gyro part of the sensor.
+    // normally should use explicit addressing in i2c calls.
+    virtual uint8_t i2cDeviceAddress(void) const                { return 0x6b; }
+
 public:
     LSM9DS1Sensor();
     virtual ~LSM9DS1Sensor();

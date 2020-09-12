@@ -3,7 +3,25 @@
 #include <Arduino.h>
 
 class SensorBase {
+private:
     static bool _isI2CSetUp;
+
+protected:
+    // when doing multi-byte reads from registers, what bit
+    // in the register address needs to be set to signal auto 
+    // incrementing in device. This number is 0-based (e.g., the 
+    // msb bit in a byte is bit 7). However, set to 0 if there
+    // is no auto-increment bit.
+    virtual uint8_t i2cAutoIncrementBit(void) const         { return 7; }
+
+    // defines the i2c address for this sensor. Set to 0xFF if this
+    // sensor does not have an i2c address.
+    virtual uint8_t i2cDeviceAddress(void) const = 0;
+
+    // normally you wouldn't call this directly. But in some cases you will. 
+    int writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value);
+    int readRegister(uint8_t slaveAddress, uint8_t address);
+    int readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length);
 
 public:
     SensorBase();
@@ -24,9 +42,9 @@ public:
     //
     // I2C methods
     //
-    int writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value);
-    int readRegister(uint8_t slaveAddress, uint8_t address);
-    int readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length);
+    int writeRegister(uint8_t address, uint8_t value)                   { return writeRegister(i2cDeviceAddress(), address, value); }
+    int readRegister(uint8_t address)                                   { return readRegister(i2cDeviceAddress(), address); }                          
+    int readRegisters(uint8_t address, uint8_t* data, size_t length)    { return readRegisters(i2cDeviceAddress(), address, data, length); }
 };
 
 
