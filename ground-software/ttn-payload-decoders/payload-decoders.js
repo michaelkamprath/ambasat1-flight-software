@@ -123,7 +123,7 @@ function DecodeSI1132Sensor(bytes) {
 	}
 
 	return {
-		uv: convertBytesToSignedInt(bytes[0], bytes[1]),
+		uv: convertBytesToSignedInt(bytes[0], bytes[1])/100.0,
 		visible: convertBytesToSignedInt(bytes[2], bytes[3]),
 		ir: convertBytesToSignedInt(bytes[4], bytes[5]),		
 	};
