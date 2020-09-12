@@ -112,11 +112,30 @@ function DecodeLSM9DS1Sensor(bytes) {
 	};
 }
 
+function DecodeSI1132Sensor(bytes) {
+	// LSM9DS1 sensor
+	if (bytes.length !== 6) {
+		return {
+			error: "payload length is not correct size",
+			port: port,
+			length: bytes.length 
+		};
+	}
+
+	return {
+		uv: convertBytesToSignedInt(bytes[0], bytes[1]),
+		visible: convertBytesToSignedInt(bytes[2], bytes[3]),
+		ir: convertBytesToSignedInt(bytes[4], bytes[5]),		
+	};
+}
+
 function Decoder(bytes, port) {
 	if (port === 1) {
 		return DecodeVoltage(bytes);
 	} else if (port === 2 ) {
 		return DecodeLSM9DS1Sensor(bytes);
+	} else if (port === 8 ) {
+		return DecodeSI1132Sensor(bytes);
 	} else if (port === 0) {
 		//nothing
 		return {};

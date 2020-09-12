@@ -2,7 +2,6 @@
 
 #include <hal/hal.h>
 #include <LowPower.h>
-#include "AmbaSat1Config.h"
 #include "Utilities.h"
 
 //
@@ -34,6 +33,7 @@ AmbaSat1App* AmbaSat1App::gApp = nullptr;
 AmbaSat1App::AmbaSat1App()
     :   _voltSensor(),
         _lsm9DS1Sensor(),
+        _missionSensor(),
         _sleeping(false)
 {
     if (AmbaSat1App::gApp != nullptr) {
@@ -60,6 +60,7 @@ void AmbaSat1App::setup()
 
     _voltSensor.setup();
     _lsm9DS1Sensor.setup();
+    _missionSensor.setup();
 
     //
     // Set up LoRaWAN radio
@@ -129,13 +130,19 @@ void AmbaSat1App::loop()
 {
     digitalWrite(LED_PIN, HIGH);
     Serial.println(F("Transmitting voltage sensor."));
-    sendSensorPayload(_voltSensor, 1);
+    sendSensorPayload(_voltSensor);
     while(!_sleeping) {
         os_runloop_once();
     }
     _sleeping = false;
     Serial.println(F("Transmitting LSM9DS1 sensor."));
-    sendSensorPayload(_lsm9DS1Sensor, 2);
+    sendSensorPayload(_lsm9DS1Sensor);
+    while(!_sleeping) {
+        os_runloop_once();
+    }
+    _sleeping = false;
+    Serial.println(F("Transmitting Mission sensor."));
+    sendSensorPayload(_missionSensor);
     while(!_sleeping) {
         os_runloop_once();
     }
@@ -147,7 +154,7 @@ void AmbaSat1App::loop()
     }   
 }
 
-void AmbaSat1App::sendSensorPayload(SensorBase& sensor, uint8_t port )
+void AmbaSat1App::sendSensorPayload(SensorBase& sensor)
 {
     // wait for any in process transmission to end
     if (LMIC.opmode & OP_TXRXPEND) {
@@ -162,7 +169,7 @@ void AmbaSat1App::sendSensorPayload(SensorBase& sensor, uint8_t port )
         return;
     }
     LMIC_setTxData2(
-        port,
+        sensor.getPort(),
         (xref2u1_t)data_ptr,
         sensor.getMeasurementBufferSize(),
         0

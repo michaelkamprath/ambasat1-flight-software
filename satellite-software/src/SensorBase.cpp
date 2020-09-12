@@ -8,11 +8,12 @@ SensorBase::SensorBase()
     if (!_isI2CSetUp) {
         Serial.println("Begin Wire");
         Wire.begin(); //I'm the master
-        delay(25); // Sensor06 has a startup time of 25ms as per the data sheet
+        delay(50); // Sensor06 has a startup time of 25ms as per the data sheet
         // Global I2C reset
         Serial.println("Global I2C reset");
         Wire.beginTransmission(0x06); // global i2c reset address
         Wire.endTransmission(); 
+        delay(50); // wait for everything to reboot
 
         _isI2CSetUp = true;
     }
@@ -32,7 +33,7 @@ int SensorBase::readRegister(uint8_t slaveAddress, uint8_t address)
         return -1;
     }
 
-    if (Wire.requestFrom(slaveAddress, 1) != 1) {
+    if (Wire.requestFrom(slaveAddress, (uint8_t)1) != 1) {
         return -1;
     }
 

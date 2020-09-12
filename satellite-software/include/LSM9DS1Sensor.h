@@ -56,6 +56,7 @@ public:
     virtual void setup(void)                                    { this->setSensorConfig(); }
     virtual const uint8_t* getCurrentMeasurementBuffer(void);
     virtual uint8_t getMeasurementBufferSize() const            { return 20; }
+    virtual uint8_t getPort() const                             { return 2; }
 };
 
 #endif

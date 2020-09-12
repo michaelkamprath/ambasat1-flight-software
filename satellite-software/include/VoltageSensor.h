@@ -18,6 +18,7 @@ public:
     virtual void setup(void);
     virtual const uint8_t* getCurrentMeasurementBuffer(void);
     virtual uint8_t getMeasurementBufferSize() const                    { return 2; }
+    virtual uint8_t getPort() const                                     { return 1; }
 };
 
 #endif

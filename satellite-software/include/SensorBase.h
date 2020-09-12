@@ -19,6 +19,7 @@ public:
     virtual const uint8_t* getCurrentMeasurementBuffer(void) = 0;
 
     virtual uint8_t getMeasurementBufferSize() const = 0;
+    virtual uint8_t getPort() const = 0;
 
     //
     // I2C methods
