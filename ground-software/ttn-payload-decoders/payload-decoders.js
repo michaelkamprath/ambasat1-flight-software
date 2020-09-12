@@ -2,7 +2,9 @@ function convertBytesToSignedInt( highByte, lowByte ) {
   var sign = highByte & (1 << 7);
   var x = (((highByte & 0xFF) << 8) | (lowByte & 0xFF));
   if (sign) {
-    result = 0xFFFF0000 | x;  // fill in most significant bits with 1's
+  	// Since javascript uses 32-bit integers, we need to fill
+  	// the top two bytes of the integers is 1's to make negative.
+    result = 0xFFFF0000 | x;
   } else {
     result = x;
   }
