@@ -14,7 +14,7 @@ private:
     bool waitUntilSleep(void);
     uint8_t readResponseRegister(void);
     bool sendCommand(uint8_t cmd_value);
-    uint8_t setParameter(uint8_t param, uint8_t value);
+    bool setParameter(uint8_t param, uint8_t value);
     uint8_t readParameter(uint8_t param);
 
 protected:

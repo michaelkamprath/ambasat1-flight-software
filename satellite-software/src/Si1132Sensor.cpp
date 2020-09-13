@@ -117,16 +117,14 @@ void Si1132Sensor::setup(void)
     writeRegister(SI1132_UCOEF2_REG, 0x01);
     writeRegister(SI1132_UCOEF3_REG, 0x00);
  
-    uint8_t param_res = 0;
-
     // turn on UV Index, ALS IR, and ALS Visible
-    param_res = setParameter(SI1132_PARAM_CHLIST, 0xB0);
+    setParameter(SI1132_PARAM_CHLIST, 0xB0);
         
     // set up VIS sensor
     //  clock divide = 1
-    param_res = setParameter(SI1132_PARAM_ALS_VIS_ADC_GAIN, 0x00);
+    setParameter(SI1132_PARAM_ALS_VIS_ADC_GAIN, 0x00);
     //  ADC count at 511
-    param_res = setParameter(SI1132_PARAM_ALS_VIS_ADC_COUNTER, 0b01110000);
+    setParameter(SI1132_PARAM_ALS_VIS_ADC_COUNTER, 0b01110000);
     // set for high sifnal (e.g., bright sun)
     // param_res = setParameter(SI1132_PARAM_ALS_VIS_ADC_MISC, 0b00100000);
  
@@ -190,7 +188,7 @@ bool Si1132Sensor::sendCommand(uint8_t cmd_value)
     return (response != 0x00);
 }
 
-uint8_t Si1132Sensor::setParameter(uint8_t param, uint8_t value)
+bool Si1132Sensor::setParameter(uint8_t param, uint8_t value)
 {
     uint8_t cmd = SI1132_CMD_PARAM_SET | param;
     // set PARAM_WR register
@@ -212,7 +210,18 @@ uint8_t Si1132Sensor::setParameter(uint8_t param, uint8_t value)
         return 0;
     }
     // read results in PARAM_RD
-    return readRegister(SI1132_PARAM_RD_REG);
+    uint8_t param_res = readRegister(SI1132_PARAM_RD_REG);
+    bool result = (param_res == value);
+    if (!result) {
+        Serial.print(F("ERROR - tried to set parameter 0x"));
+        Serial.print(param, HEX);
+        Serial.print(F(" to 0x"));
+        Serial.print(value, HEX);
+        Serial.print(F(" but got 0x"));
+        Serial.print(param_res, HEX);
+        Serial.print(F("\n"));
+    }
+    return result;
 }
 
 uint8_t Si1132Sensor::readParameter(uint8_t param)
