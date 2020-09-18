@@ -10,7 +10,8 @@ echo "Saving telemetry data files to: ${DATA_FILE_DIR}"
 
 docker build -t telemetry-service:latest .
 
-docker run -it  \
-     --mount type=bind,src=$DATA_FILE_DIR,dst=/run/telemetry \
+docker run -d -it \
+    --name telemetry-service \
+    --mount type=bind,src=$DATA_FILE_DIR,dst=/run/telemetry \
     -p 8000:8000 \
     telemetry-service:latest
