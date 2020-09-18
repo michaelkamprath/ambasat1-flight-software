@@ -43,6 +43,9 @@ private:
 
     bool isEEPROMErased(void) const;
     void loadAllCongigurations(void);
+    uint32_t calculateCRC(void) const;
+    void updateCRC(void);
+    bool checkCRC(void) const;
 
     // this setter is private because no one should be setting it outside this class.
     void setRebootCount(uint32_t rebootCount);
