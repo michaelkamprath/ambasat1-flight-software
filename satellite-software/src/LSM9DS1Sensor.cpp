@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "LSM9DS1Sensor.h"
 #include "Utilities.h"
+#include "PersistedConfiguration.h"
 
 //
 // LSM9DS1Sensor
@@ -36,10 +37,8 @@
 #define LSM9DS1_STATUS_REG_M       0x27
 #define LSM9DS1_OUT_X_L_M          0x28
 
-LSM9DS1Sensor::LSM9DS1Sensor()
-    :   _accelConfig(ACCELERATION_SENSITIVITY_2G),
-        _gyroConfig(GYRO_SENSITIVITY_245DPS),
-        _magConfig(MAGNETIC_SENSITIVITY_4GAUSS)
+LSM9DS1Sensor::LSM9DS1Sensor(PersistedConfiguration& config)
+    :   SensorBase(config)
 {
     // Assumes Wire has been initialized by base class
 
@@ -47,9 +46,11 @@ LSM9DS1Sensor::LSM9DS1Sensor()
     if (!begin())
     {
         Serial.println(F("Oops ... unable to initialize the LSM9DS1. Check your wiring!"));
-        while (1);
+        _activated = false;
+    } else {
+        Serial.println(F("Found LSM9DS1 9DOF"));
+        _activated = true;
     }
-    Serial.println(F("Found LSM9DS1 9DOF"));
  }
 
 LSM9DS1Sensor::~LSM9DS1Sensor()
@@ -59,6 +60,9 @@ LSM9DS1Sensor::~LSM9DS1Sensor()
 
 bool LSM9DS1Sensor::begin(void)
 {
+    if (!_activated) {
+        return false;
+    }
     // reset
     writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG8, 0x05);
     writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M, 0x0c);
@@ -78,6 +82,10 @@ bool LSM9DS1Sensor::begin(void)
 }
 void LSM9DS1Sensor::end(void)
 {
+    if (!_activated) {
+        return;
+    }
+
     writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG3_M, 0x03);
     writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG1_G, 0x00);
     writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG6_XL, 0x00);
@@ -94,6 +102,9 @@ void LSM9DS1Sensor::end(void)
 }
 void LSM9DS1Sensor::setSensorConfig(void)
 {
+    if (!_activated) {
+        return;
+    }
     // Configure the sensor options   
 
     // Gyro:
@@ -106,7 +117,7 @@ void LSM9DS1Sensor::setSensorConfig(void)
     // Accel:
     //      * 50 Hz ODR (CTRL_REG6_XL | 0b01000000)
     //      * 2G scale (CTRL_REG6_XL | 0b00000000)
-     writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG6_XL, 0x40);
+    writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG6_XL, 0x40);
 
     //  Magnetic:
     //      * Low power mode (CTRL_REG3_M | 0b00100000) and (CTRL_REG4_M | 0b00000000)
@@ -119,9 +130,9 @@ void LSM9DS1Sensor::setSensorConfig(void)
     writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG4_M, 0x00);
 
     // now set the sensor sensitivity settings to their configured settings.
-    setAccelFS(_accelConfig);
-    setGyroFS(_gyroConfig);
-    setMagnetFS(_magConfig);
+    setAccelFS(_config.getAcceleratonSensitivitySetting());
+    setGyroFS(_config.getGysroSensitivitySetting());
+    setMagnetFS(_config.getMagneticSensitivitySetting());
  }
 
 int LSM9DS1Sensor::setAccelFS(AccelerationSensitivitySetting config)
@@ -206,6 +217,10 @@ void LSM9DS1Sensor::setSensorValueAtBufferLocation(float sensor_value, uint8_t i
 const uint8_t* 
 LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
 {
+    if (!_activated) {
+        return nullptr;
+    }
+
     int16_t accelData[3], gyroData[3], magneticData[3];
 
     // acceleration
@@ -257,9 +272,9 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
     setSensorValueAtBufferLocation(magneticData[0], 12);
     setSensorValueAtBufferLocation(magneticData[1], 14);
     setSensorValueAtBufferLocation(magneticData[2], 16);
-    _buffer[18] = (uint8_t)_accelConfig;
-    _buffer[18] |= (uint8_t)_gyroConfig;
-    _buffer[19] = (uint8_t)_magConfig;
+    _buffer[18] = (uint8_t)_config.getAcceleratonSensitivitySetting();
+    _buffer[18] |= (uint8_t)_config.getGysroSensitivitySetting();
+    _buffer[19] = (uint8_t)_config.getMagneticSensitivitySetting();
    
     return _buffer;
 }

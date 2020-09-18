@@ -2,6 +2,8 @@
 #define __Si1132Sensor__
 #include "SensorBase.h"
 
+class PersistedConfiguration;
+
 class Si1132Sensor : public SensorBase
 {
 private:
@@ -26,7 +28,7 @@ protected:
 
     virtual uint8_t i2cDeviceAddress(void) const                { return 0x60; }
 public:
-    Si1132Sensor();
+    Si1132Sensor(PersistedConfiguration& config);
     virtual ~Si1132Sensor();
 
     virtual void setup(void);

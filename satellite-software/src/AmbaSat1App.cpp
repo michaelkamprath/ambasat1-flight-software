@@ -31,9 +31,10 @@ AmbaSat1App* AmbaSat1App::gApp = nullptr;
 //
 
 AmbaSat1App::AmbaSat1App()
-    :   _voltSensor(),
-        _lsm9DS1Sensor(),
-        _missionSensor(),
+    :   _config(),
+        _voltSensor(_config),
+        _lsm9DS1Sensor(_config),
+        _missionSensor(_config),
         _sleeping(false)
 {
     if (AmbaSat1App::gApp != nullptr) {

@@ -2,6 +2,8 @@
 #define __VoltageSensor__
 #include "SensorBase.h"
 
+class PersistedConfiguration;
+
 //
 // Voltage Sensor
 //
@@ -16,7 +18,7 @@ protected:
     // this sensor is not i2c
     virtual uint8_t i2cDeviceAddress(void) const                        { return 0xFF; }
 public:
-    VoltageSensor();
+    VoltageSensor(PersistedConfiguration& config);
     virtual ~VoltageSensor();
 
     virtual void setup(void);

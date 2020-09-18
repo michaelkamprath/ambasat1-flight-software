@@ -1,9 +1,11 @@
 #include <Wire.h>
 #include "SensorBase.h"
+#include "PersistedConfiguration.h"
 
 bool SensorBase::_isI2CSetUp = false;
 
-SensorBase::SensorBase()
+SensorBase::SensorBase(PersistedConfiguration& config)
+    : _config(config)
 {
     if (!_isI2CSetUp) {
         Serial.println("Begin Wire");

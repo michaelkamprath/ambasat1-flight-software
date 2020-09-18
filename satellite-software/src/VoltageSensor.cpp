@@ -8,7 +8,8 @@
 //      https://www.sciencetronics.com/greenphotons/?p=1521
 //
 
-VoltageSensor::VoltageSensor()
+VoltageSensor::VoltageSensor(PersistedConfiguration& config)
+  : SensorBase(config)
 {
 
 }

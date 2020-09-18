@@ -48,8 +48,9 @@
 #define SI1132_PARAM_ALS_IR_ADC_MISC        0x1F
 #define SI1132_PARAM_
 
-Si1132Sensor::Si1132Sensor()
-    :   _MEAS_RATE0(SI1132_MEAS_RATE0_REG),
+Si1132Sensor::Si1132Sensor(PersistedConfiguration& config)
+    :   SensorBase(config),
+        _MEAS_RATE0(SI1132_MEAS_RATE0_REG),
         _MEAS_RATE1(SI1132_MEAS_RATE1_REG)
 {
 

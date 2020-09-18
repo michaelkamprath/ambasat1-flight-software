@@ -2,11 +2,15 @@
 #define __SensorBase__
 #include <Arduino.h>
 
+class PersistedConfiguration;
+
 class SensorBase {
 private:
     static bool _isI2CSetUp;
 
 protected:
+    PersistedConfiguration& _config;
+
     // when doing multi-byte reads from registers, this indicates what bit
     // in the register address needs to be set to signal auto  incrementing in 
     // device. This number is 0-based (e.g., the msb bit in a byte is bit 7). 
@@ -24,7 +28,7 @@ protected:
     int readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length);
 
 public:
-    SensorBase();
+    SensorBase(PersistedConfiguration& config);
     virtual ~SensorBase();
 
     virtual void setup(void)    {}
@@ -42,7 +46,7 @@ public:
     virtual uint8_t getPort() const = 0;
 
     //
-    // I2C methods - use these to interact with teh i2c bus.
+    // I2C methods - use these to interact with the i2c bus.
     //
     int writeRegister(uint8_t address, uint8_t value)                   { return writeRegister(i2cDeviceAddress(), address, value); }
     int readRegister(uint8_t address)                                   { return readRegister(i2cDeviceAddress(), address); }                          
