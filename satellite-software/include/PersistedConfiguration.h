@@ -37,6 +37,7 @@ class PersistedConfiguration
 {
 private:
     uint32_t _rebootCount;
+    uint32_t _uplinkFrameCount;
     AccelerationSensitivitySetting _accelSensitivity;
     GyroSensitivitySetting _gyroSensitivity;
     MagneticSensitivitySetting _magneticSensitivity;
@@ -48,7 +49,7 @@ private:
     bool checkCRC(void) const;
 
     // this setter is private because no one should be setting it outside this class.
-    void setRebootCount(uint32_t rebootCount);
+    void setRebootCount(uint32_t rebootCount, bool updateCRC = true);
 public:
     PersistedConfiguration();
 
@@ -59,15 +60,18 @@ public:
     //
 
     uint32_t getRebootCount(void) const           { return _rebootCount; }
+
+    uint32_t getUplinkFrameCount(void) const      { return _uplinkFrameCount; }
+     void setUplinkFrameCount(uint32_t frameCount, bool updateCRC = true);   
     
     AccelerationSensitivitySetting getAcceleratonSensitivitySetting(void) const     { return _accelSensitivity; }
-    void setAcceleratonSensitivitySetting(AccelerationSensitivitySetting seting);
+    void setAcceleratonSensitivitySetting(AccelerationSensitivitySetting seting, bool updateCRC = true);
     
     GyroSensitivitySetting getGysroSensitivitySetting(void) const                   { return _gyroSensitivity; }
-    void setGysroSensitivitySetting(GyroSensitivitySetting setting);
+    void setGysroSensitivitySetting(GyroSensitivitySetting setting, bool updateCRC = true);
 
     MagneticSensitivitySetting getMagneticSensitivitySetting(void) const            { return _magneticSensitivity; }
-    void setMagneticSensitivitySetting(MagneticSensitivitySetting setting);
+    void setMagneticSensitivitySetting(MagneticSensitivitySetting setting, bool updateCRC = true);
 
 };
 
