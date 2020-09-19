@@ -141,20 +141,26 @@ void AmbaSat1App::loop()
         os_runloop_once();
     }
     _sleeping = false;
-    _config.setUplinkFrameCount(LMIC.seqnoUp);
+
     Serial.println(F("Transmitting LSM9DS1 sensor."));
     sendSensorPayload(_lsm9DS1Sensor);
     while(!_sleeping) {
         os_runloop_once();
     }
     _sleeping = false;
-    _config.setUplinkFrameCount(LMIC.seqnoUp);
+
     Serial.println(F("Transmitting Mission sensor."));
     sendSensorPayload(_missionSensor);
     while(!_sleeping) {
         os_runloop_once();
     }
     _sleeping = false;
+    //
+    // technically there is some risk that the satellite will loose power between
+    // the first transmission above and the last one, and in such case we will not
+    // capture the uplink frame count. We are accepting that risk in order to reduce
+    // number of time we write to EEPROM.
+    //
     _config.setUplinkFrameCount(LMIC.seqnoUp);
     digitalWrite(LED_PIN, LOW);
     for (int i=0; i < SLEEPCYCLES; i++)
