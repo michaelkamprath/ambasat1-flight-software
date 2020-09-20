@@ -1,4 +1,4 @@
-function convertBytesToSignedInt( highByte, lowByte ) {
+function convertTwoBytesToSignedInt( highByte, lowByte ) {
   var sign = highByte & (1 << 7);
   var x = (((highByte & 0xFF) << 8) | (lowByte & 0xFF));
   if (sign) {
@@ -11,19 +11,41 @@ function convertBytesToSignedInt( highByte, lowByte ) {
   return result;
 }
 
-function DecodeVoltage(bytes) {
+function convertFourBytesToUnsignedInt( hhByte, hlByte, lhByte, llByte ) {
+	var result = hhByte;
+	result<<=8;
+	result += hlByte;
+	result<<=8;
+	result += lhByte;
+	result<<=8;
+	result += llByte;
+	
+	return result>>>0;
+}
+function DecodeSatelliteStatus(bytes) {
 	// Voltage Sensor
-	if (bytes.length !== 2) {
+	if (bytes.length !== 7) {
 		return {
 			error: "payload length is not correct size",
 			port: port,
 			length: bytes.length 
 		};
 	}
-	var volts = convertBytesToSignedInt(bytes[0], bytes[1]);
+	
+	var volts = convertTwoBytesToSignedInt(bytes[4], bytes[5]);
+	var isLSM9DS1Found = Boolean(bytes[6]&0x01 > 0);
+	var isLSM9DS1Active = Boolean(bytes[6]&0x02 > 0);
+	var isMissionSensorFound = Boolean(bytes[6]&0x10 > 0);
+	var isMissionSensorActive = Boolean(bytes[6]&0x20 > 0);
+	
 	
 	return {
-		milli_volts: volts
+		boot_count: convertFourBytesToUnsignedInt(bytes[0],bytes[1],bytes[2],bytes[3]),
+		milli_volts: volts,
+		LSM9DS1_found: isLSM9DS1Found,
+		LSM9DS1_active: isLSM9DS1Active,
+		mission_sensor_found: isMissionSensorFound,		
+		mission_sensor_active: isMissionSensorActive
 	};
 }
 
@@ -37,15 +59,15 @@ function DecodeLSM9DS1Sensor(bytes) {
 		};
 	}
 	
-	var rawAccelX = convertBytesToSignedInt(bytes[0], bytes[1]);
-	var rawAccelY = convertBytesToSignedInt(bytes[2], bytes[3]);
-	var rawAccelZ = convertBytesToSignedInt(bytes[4], bytes[5]);
-	var rawGyroX = convertBytesToSignedInt(bytes[6], bytes[7]);
-	var rawGyroY = convertBytesToSignedInt(bytes[8], bytes[9]);
-	var rawGyroZ = convertBytesToSignedInt(bytes[10], bytes[11]);
-	var rawMagX = convertBytesToSignedInt(bytes[12], bytes[13]);
-	var rawMagY = convertBytesToSignedInt(bytes[14], bytes[15]);
-	var rawMagZ = convertBytesToSignedInt(bytes[16], bytes[17]);
+	var rawAccelX = convertTwoBytesToSignedInt(bytes[0], bytes[1]);
+	var rawAccelY = convertTwoBytesToSignedInt(bytes[2], bytes[3]);
+	var rawAccelZ = convertTwoBytesToSignedInt(bytes[4], bytes[5]);
+	var rawGyroX = convertTwoBytesToSignedInt(bytes[6], bytes[7]);
+	var rawGyroY = convertTwoBytesToSignedInt(bytes[8], bytes[9]);
+	var rawGyroZ = convertTwoBytesToSignedInt(bytes[10], bytes[11]);
+	var rawMagX = convertTwoBytesToSignedInt(bytes[12], bytes[13]);
+	var rawMagY = convertTwoBytesToSignedInt(bytes[14], bytes[15]);
+	var rawMagZ = convertTwoBytesToSignedInt(bytes[16], bytes[17]);
 
 	var accelSensitivty = 0.0;
 	switch (bytes[18]&0x0F) {
@@ -123,15 +145,15 @@ function DecodeSI1132Sensor(bytes) {
 	}
 
 	return {
-		uv: convertBytesToSignedInt(bytes[0], bytes[1])/100.0,
-		visible: convertBytesToSignedInt(bytes[2], bytes[3]),
-		ir: convertBytesToSignedInt(bytes[4], bytes[5]),		
+		uv: convertTwoBytesToSignedInt(bytes[0], bytes[1])/100.0,
+		visible: convertTwoBytesToSignedInt(bytes[2], bytes[3]),
+		ir: convertTwoBytesToSignedInt(bytes[4], bytes[5]),		
 	};
 }
 
 function Decoder(bytes, port) {
 	if (port === 1) {
-		return DecodeVoltage(bytes);
+		return DecodeSatelliteStatus(bytes);
 	} else if (port === 2 ) {
 		return DecodeLSM9DS1Sensor(bytes);
 	} else if (port === 8 ) {

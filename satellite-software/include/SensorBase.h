@@ -1,10 +1,11 @@
 #ifndef __SensorBase__
 #define __SensorBase__
 #include <Arduino.h>
+#include "LoRaPayloadBase.h"
 
 class PersistedConfiguration;
 
-class SensorBase {
+class SensorBase : public LoRaPayloadBase {
 private:
     static bool _isI2CSetUp;
 
@@ -33,17 +34,7 @@ public:
 
     virtual void setup(void)    {}
 
-    // This functions is expected to get a current sensor measurement then fill a 
-    // byte buffer that will be transmitted via the  LoRaWAN radio.  It is the 
-    // sensor's responsibility to define the the buffer format for it's measurement. 
-    // IMPORTANT: Returns NULL if sensor read was not successful.
-    virtual const uint8_t* getCurrentMeasurementBuffer(void) = 0;
 
-    // The number of bytes returned by getCurrentMeasurementBuffer()
-    virtual uint8_t getMeasurementBufferSize() const = 0;
-
-    // defines the LoRaWAN port the sensor's measurements should be sent across.
-    virtual uint8_t getPort() const = 0;
 
     //
     // I2C methods - use these to interact with the i2c bus.

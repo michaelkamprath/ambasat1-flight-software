@@ -66,7 +66,8 @@ The uplink data format for sensors (ports 2-10) will be specific to that sensor 
 The `CMD Status` Uplink will have the following format: **TBD**
 
 
-##### Uplink Doecoder
+##### Uplink Decoder
+TBD
 
 ### Command Request Downlinks
 In normal oprations, the AmbaSat is not intended to be regularly sent commands to change how it operates. However, the ability to alter operational paramters of the satellite will be enabled using the TTN downlink abilities. 
