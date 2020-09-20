@@ -46,10 +46,10 @@ LSM9DS1Sensor::LSM9DS1Sensor(PersistedConfiguration& config)
     if (!begin())
     {
         Serial.println(F("Oops ... unable to initialize the LSM9DS1. Check your wiring!"));
-        _activated = false;
+        setIsFound(false);
     } else {
         Serial.println(F("Found LSM9DS1 9DOF"));
-        _activated = true;
+        setIsFound(true);
     }
  }
 
@@ -60,9 +60,6 @@ LSM9DS1Sensor::~LSM9DS1Sensor()
 
 bool LSM9DS1Sensor::begin(void)
 {
-    if (!_activated) {
-        return false;
-    }
     // reset
     writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG8, 0x05);
     writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M, 0x0c);
@@ -82,7 +79,7 @@ bool LSM9DS1Sensor::begin(void)
 }
 void LSM9DS1Sensor::end(void)
 {
-    if (!_activated) {
+    if (!isFound()) {
         return;
     }
 
@@ -100,9 +97,22 @@ void LSM9DS1Sensor::end(void)
     digitalWrite(PIN_ENABLE_I2C_PULLUP, HIGH); 
 #endif 
 }
+
+bool LSM9DS1Sensor::isActive(void) const
+{
+    return (
+        SensorBase::isActive()
+        &&(
+            (_config.getAcceleratonSensitivitySetting() != ACCELERATION_SENSITIVITY_OFF)
+          ||(_config.getGysroSensitivitySetting() != GYRO_SENSITIVITY_OFF)
+          ||(_config.getMagneticSensitivitySetting() != MAGNETIC_SENSITIVITY_OFF)
+        )
+    );
+}
+
 void LSM9DS1Sensor::setSensorConfig(void)
 {
-    if (!_activated) {
+    if (!isFound()) {
         return;
     }
     // Configure the sensor options   
@@ -135,8 +145,12 @@ void LSM9DS1Sensor::setSensorConfig(void)
     setMagnetFS(_config.getMagneticSensitivitySetting());
  }
 
-int LSM9DS1Sensor::setAccelFS(AccelerationSensitivitySetting config)
+void LSM9DS1Sensor::setAccelFS(AccelerationSensitivitySetting config)
 {	
+    if (!isFound()) {
+        return;
+    }
+
     uint8_t range = 0x00;
     switch(config) {
         case ACCELERATION_SENSITIVITY_2G:
@@ -152,15 +166,19 @@ int LSM9DS1Sensor::setAccelFS(AccelerationSensitivitySetting config)
             range = (0b01 << 3);
             break;
         default:
-            return 0;
+            return;
             break;
     }    
 	uint8_t setting = ((readRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG6_XL) & 0xE7) | range);
-	return writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG6_XL,setting) ;
+	writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG6_XL,setting) ;
 }
 
-int LSM9DS1Sensor::setGyroFS(GyroSensitivitySetting config)
+void LSM9DS1Sensor::setGyroFS(GyroSensitivitySetting config)
 {
+    if (!isFound()) {
+        return;
+    }
+
     uint8_t range = 0x00;
     switch(config) {
         case GYRO_SENSITIVITY_245DPS:
@@ -176,15 +194,19 @@ int LSM9DS1Sensor::setGyroFS(GyroSensitivitySetting config)
             range = (0b11 << 3);
             break;
         default:
-            return 0;
+            return;
             break;
     }
     uint8_t setting = ((readRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG1_G) & 0xE7) | range );
-    return writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG1_G,setting) ;
+    writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG1_G,setting) ;
 }
 
-int LSM9DS1Sensor::setMagnetFS(MagneticSensitivitySetting config) // 0=400.0; 1=800.0; 2=1200.0 , 3=1600.0  (µT)
+void LSM9DS1Sensor::setMagnetFS(MagneticSensitivitySetting config) // 0=400.0; 1=800.0; 2=1200.0 , 3=1600.0  (µT)
 {
+    if (!isFound()) {
+        return;
+    }
+
     uint8_t range = 0x00;
     switch(config) {
         case MAGNETIC_SENSITIVITY_4GAUSS:
@@ -200,10 +222,10 @@ int LSM9DS1Sensor::setMagnetFS(MagneticSensitivitySetting config) // 0=400.0; 1=
             range = (0b11 << 5);
             break;
         default:
-            return 0;
+            return;
             break;
     }
-    return writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M,range) ;
+    writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M,range) ;
 }
 
 void LSM9DS1Sensor::setSensorValueAtBufferLocation(float sensor_value, uint8_t index)
@@ -217,7 +239,7 @@ void LSM9DS1Sensor::setSensorValueAtBufferLocation(float sensor_value, uint8_t i
 const uint8_t* 
 LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
 {
-    if (!_activated) {
+    if (!isActive()) {
         return nullptr;
     }
 

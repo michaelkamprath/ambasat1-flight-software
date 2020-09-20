@@ -8,6 +8,7 @@ class PersistedConfiguration;
 class SensorBase : public LoRaPayloadBase {
 private:
     static bool _isI2CSetUp;
+    bool _isFound;
 
 protected:
     PersistedConfiguration& _config;
@@ -28,13 +29,21 @@ protected:
     int readRegister(uint8_t slaveAddress, uint8_t address);
     int readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length);
 
+    void setIsFound(bool isFound)               { _isFound = isFound; }
+
 public:
     SensorBase(PersistedConfiguration& config);
     virtual ~SensorBase();
 
     virtual void setup(void)    {}
 
+    // the sensor hardware can be found and responds to queries
+    bool isFound(void) const                    { return _isFound; }
 
+    // the sensor is collecting measurements per configuration. Returns false if sensor is 
+    // configured to be off. Returns false if sensor is not found.
+    // Override to reflect specific sensor confiuration.  
+    virtual bool isActive(void) const           { return isFound(); }
 
     //
     // I2C methods - use these to interact with the i2c bus.

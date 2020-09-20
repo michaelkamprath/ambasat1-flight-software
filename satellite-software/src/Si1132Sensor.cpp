@@ -57,7 +57,9 @@ Si1132Sensor::Si1132Sensor(PersistedConfiguration& config)
     if (!begin())
     {
         Serial.println(F("Oops ... unable to initialize the Si1132"));
-        while (1);
+        setIsFound(false);
+    } else {
+        setIsFound(true);
     }
 }
 
@@ -67,6 +69,10 @@ Si1132Sensor::~Si1132Sensor()
 }
 void Si1132Sensor::reset(void)
 {
+    if (!isFound()) {
+        return;
+    }
+
     writeRegister(SI1132_MEAS_RATE0_REG, 0x00);
     writeRegister(SI1132_MEAS_RATE1_REG, 0x00);
     writeRegister(SI1132_IRQ_ENABLE_REG, 0x00);
@@ -105,8 +111,17 @@ bool Si1132Sensor::begin(void)
     return true;
 }
 
+bool Si1132Sensor::isActive(void) const
+{
+    return SensorBase::isActive();
+}
+
 void Si1132Sensor::setup(void)
 {
+    if (!isFound()) {
+        return;
+    }
+
     reset();
  
     // sendCommand(SI1132_CMD_RESET);
@@ -243,6 +258,10 @@ uint8_t Si1132Sensor::readParameter(uint8_t param)
 
 const uint8_t* Si1132Sensor::getCurrentMeasurementBuffer(void)
 {
+    if (!isActive()) {
+        return nullptr;
+    }
+
     // start the measurements
     sendCommand(SI1132_CMD_ALS_FORCE);
 

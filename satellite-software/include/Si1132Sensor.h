@@ -32,6 +32,7 @@ public:
     virtual ~Si1132Sensor();
 
     virtual void setup(void);
+    virtual bool isActive(void) const;
     virtual const uint8_t* getCurrentMeasurementBuffer(void);
     virtual uint8_t getMeasurementBufferSize() const            { return 6; }
     virtual uint8_t getPort() const                             { return 8; }

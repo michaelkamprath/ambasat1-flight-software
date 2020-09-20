@@ -25,6 +25,14 @@ const lmic_pinmap lmic_pins = {
 
 AmbaSat1App* AmbaSat1App::gApp = nullptr;
 
+//
+// Useful #defines
+//
+
+#define SENSOR_STATUS_LSM9DS1_FOUND     0b00000001
+#define SENSOR_STATUS_LSM9DS1_ACTIVE    0b00000010
+#define SENSOR_STATUS_MISSION_FOUND     0b00010000
+#define SENSOR_STATUS_MISSION_ACTIVE    0b00100000
 
 //
 // AmbaSat1App
@@ -140,19 +148,23 @@ void AmbaSat1App::loop()
     }
     _sleeping = false;
 
-    Serial.println(F("Transmitting LSM9DS1 sensor."));
-    sendSensorPayload(_lsm9DS1Sensor);
-    while(!_sleeping) {
-        os_runloop_once();
+    if (_lsm9DS1Sensor.isActive()) {
+        Serial.println(F("Transmitting LSM9DS1 sensor."));
+        sendSensorPayload(_lsm9DS1Sensor);
+        while(!_sleeping) {
+            os_runloop_once();
+        }
+        _sleeping = false;
     }
-    _sleeping = false;
 
-    Serial.println(F("Transmitting Mission sensor."));
-    sendSensorPayload(_missionSensor);
-    while(!_sleeping) {
-        os_runloop_once();
+    if (_missionSensor.isActive()) {
+        Serial.println(F("Transmitting Mission sensor."));
+        sendSensorPayload(_missionSensor);
+        while(!_sleeping) {
+            os_runloop_once();
+        }
+        _sleeping = false;
     }
-    _sleeping = false;
     //
     // technically there is some risk that the satellite will loose power between
     // the first transmission above and the last one, and in such case we will not
@@ -404,8 +416,22 @@ AmbaSat1App::getCurrentMeasurementBuffer(void)
     hton_int32(_config.getRebootCount(), &(_buffer[0]));
     hton_int16(this->readVccMilliVolts(), &(_buffer[4]));
 
-    // TODO: hard coding sensor status for now. Fix this!
-    _buffer[6] = 0b00110011;
+    // calculate the sensor status byte
+    uint8_t sensorStatus = 0x00;
+    if (_lsm9DS1Sensor.isFound()) {
+        sensorStatus |= SENSOR_STATUS_LSM9DS1_FOUND;
+    }
+    if (_lsm9DS1Sensor.isActive()) {
+        sensorStatus |= SENSOR_STATUS_LSM9DS1_ACTIVE;
+    }
+    if (_missionSensor.isFound()) {
+        sensorStatus |= SENSOR_STATUS_MISSION_FOUND;
+    }
+    if (_missionSensor.isActive()) {
+        sensorStatus |= SENSOR_STATUS_MISSION_ACTIVE;
+    }
+
+    _buffer[6] = sensorStatus;
     
     return _buffer;
 }

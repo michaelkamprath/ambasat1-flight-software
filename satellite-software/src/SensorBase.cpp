@@ -5,7 +5,8 @@
 bool SensorBase::_isI2CSetUp = false;
 
 SensorBase::SensorBase(PersistedConfiguration& config)
-    : _config(config)
+    : _isFound(false),
+      _config(config)
 {
     if (!_isI2CSetUp) {
         Serial.println("Begin Wire");

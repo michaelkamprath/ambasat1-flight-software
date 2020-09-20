@@ -25,7 +25,7 @@ http://your_ip_address:8000/telemetry/dataset_name
 Where  `your_ip_address` is the IP address where your docker container is running, and `dataset_name` is a unique name you want to give to the data from this application. the HTTP Method should be `POST`.
 
 ## Getting Saved Data
-The data is saved in the JSON Lines format (one JSON payload per line) with the file name of `dataset_name.data`, where `dataset_name` is the data set name you used in the POST URL. The data can be found in the data directory you configured, or you can fetch it from the service using a HTTP GET request at the same URL you posted telemetry data to for the data set.
+The data is saved in the JSON Lines format (one JSON payload per line) with the file name of `dataset_name.jsonl`, where `dataset_name` is the data set name you used in the POST URL. The data can be found in the data directory you configured, or you can fetch it from the service using a HTTP GET request at the same URL you posted telemetry data to for the data set.
 
 # Issues and TODOs
 * Currently this service has no security.

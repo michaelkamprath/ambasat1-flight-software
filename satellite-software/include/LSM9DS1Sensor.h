@@ -13,14 +13,13 @@ class LSM9DS1Sensor : public SensorBase {
 private:
     uint8_t _buffer[20];
     bool _continuousMode;
-    bool _activated;
 
     bool begin(void);
     void end(void);
  
-    int setAccelFS(AccelerationSensitivitySetting config);
-    int setGyroFS(GyroSensitivitySetting config);
-    int setMagnetFS(MagneticSensitivitySetting config);
+    void setAccelFS(AccelerationSensitivitySetting config);
+    void setGyroFS(GyroSensitivitySetting config);
+    void setMagnetFS(MagneticSensitivitySetting config);
     
     void setSensorConfig(void);
     void setSensorValueAtBufferLocation(float sensor_value, uint8_t index);
@@ -35,6 +34,7 @@ public:
     virtual ~LSM9DS1Sensor();
 
     virtual void setup(void)                                    { this->setSensorConfig(); }
+    virtual bool isActive(void) const;
     virtual const uint8_t* getCurrentMeasurementBuffer(void);
     virtual uint8_t getMeasurementBufferSize() const            { return 20; }
     virtual uint8_t getPort() const                             { return 2; }
