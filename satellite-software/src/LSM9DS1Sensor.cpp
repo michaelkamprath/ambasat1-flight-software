@@ -45,7 +45,7 @@ LSM9DS1Sensor::LSM9DS1Sensor(PersistedConfiguration& config)
     // Try to initialise and warn if we couldn't detect the chip
     if (!begin())
     {
-        Serial.println(F("Oops ... unable to initialize the LSM9DS1. Check your wiring!"));
+        Serial.println(F("ERROR: unable to initialize the LSM9DS1. Check your wiring!"));
         setIsFound(false);
     } else {
         Serial.println(F("Found LSM9DS1 9DOF"));

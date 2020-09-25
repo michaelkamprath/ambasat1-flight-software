@@ -33,10 +33,10 @@ function DecodeSatelliteStatus(bytes) {
 	}
 	
 	var volts = convertTwoBytesToSignedInt(bytes[4], bytes[5]);
-	var isLSM9DS1Found = Boolean(bytes[6]&0x01 > 0);
-	var isLSM9DS1Active = Boolean(bytes[6]&0x02 > 0);
-	var isMissionSensorFound = Boolean(bytes[6]&0x10 > 0);
-	var isMissionSensorActive = Boolean(bytes[6]&0x20 > 0);
+	var isLSM9DS1Found = Boolean((bytes[6]&0x01) > 0);
+	var isLSM9DS1Active = Boolean((bytes[6]&0x02) > 0);
+	var isMissionSensorFound = Boolean((bytes[6]&0x10) > 0);
+	var isMissionSensorActive = Boolean((bytes[6]&0x20) > 0);
 	
 	
 	return {
@@ -134,8 +134,53 @@ function DecodeLSM9DS1Sensor(bytes) {
 	};
 }
 
+function DecodeSTS21Sensor(bytes) {
+	// STS21 sensor
+	if (bytes.length !== 5) {
+		return {
+			error: "payload length is not correct size",
+			port: port,
+			length: bytes.length 
+		};
+	}
+	var tempReading = convertTwoBytesToSignedInt(bytes[0], bytes[1]);
+	var humidReading = convertTwoBytesToSignedInt(bytes[2], bytes[3]);
+	var statusByte = bytes[4];
+	var measurementResolutionBits = 0;
+	switch (statusByte&0x81) {
+		case 0x00:
+			measurementResolutionBits = 14;
+			break;
+		case 0x01:
+			measurementResolutionBits = 12;
+			break;
+		case 0x80:
+			measurementResolutionBits = 13;
+			break;
+		case 0x81:
+			measurementResolutionBits = 11;
+			break;
+		default:
+			measurementResolutionBits = 0;
+			break;
+	}
+	
+	var temperature = -46.85 + 175.72*tempReading/65536.0;
+	var humidity = -6.0 + 125.0*humidReading/65536.0;
+	var endOfBattery = Boolean(statusByte&0x40 > 0);
+	var onChipHeaterEnabled = Boolean(statusByte&0x04 > 0);
+	
+	return {
+		temperature: temperature,
+		humidity: humidity,
+		end_of_battery: endOfBattery,
+		on_chip_heater: onChipHeaterEnabled,
+		measurement_resolution: measurementResolutionBits
+	}
+}
+
 function DecodeSI1132Sensor(bytes) {
-	// LSM9DS1 sensor
+	// Si1132 sensor
 	if (bytes.length !== 6) {
 		return {
 			error: "payload length is not correct size",
@@ -156,6 +201,8 @@ function Decoder(bytes, port) {
 		return DecodeSatelliteStatus(bytes);
 	} else if (port === 2 ) {
 		return DecodeLSM9DS1Sensor(bytes);
+	} else if (port === 4 ) {
+		return DecodeSTS21Sensor(bytes);
 	} else if (port === 8 ) {
 		return DecodeSI1132Sensor(bytes);
 	} else if (port === 0) {

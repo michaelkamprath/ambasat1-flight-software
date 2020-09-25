@@ -66,7 +66,7 @@ The uplink data format for sensors (ports 2-10) will be specific to that sensor 
 The `CMD Status` Uplink will have the following format: **TBD**
 
 
-##### Uplink Decoder
+#### Uplink Decoder
 TBD
 
 ### Command Request Downlinks
@@ -116,5 +116,6 @@ The following articles and documents are useful when designing this software
 * [TTN LoraWan Atmega32U4 based node – ABP version](https://primalcortex.wordpress.com/2017/10/31/ttnlorawan32u4node/)
 * [Frame counters in ABP mode](https://forum.chirpstack.io/t/frame-counters-in-abp-mode/811)
 * [Where in LMiC is the “fCnt” parameter stored?](https://www.thethingsnetwork.org/forum/t/where-in-lmic-is-the-fcnt-parameter-stored/3082)
+* [LMIC Frame Counter Problem](https://www.robmiles.com/journal/2020/1/17/lmic-frame-counter-problem)
 * [Unit Tests on Platform IO](https://www.thingforward.io/techblog/2017-07-25-starting-embedded-testing-with-platformio.html)
 * [Example of How to Write to Flash Memory](https://github.com/MCUdude/MiniCore/blob/master/avr/libraries/Optiboot_flasher/examples/SerialReadWrite/SerialReadWrite.ino)

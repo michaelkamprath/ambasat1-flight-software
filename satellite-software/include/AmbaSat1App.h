@@ -14,6 +14,8 @@ private:
     LSM9DS1Sensor   _lsm9DS1Sensor;
 #if AMBASAT_MISSION_SENSOR == SENSOR_SI1132
     Si1132Sensor    _missionSensor;
+#elif AMBASAT_MISSION_SENSOR == SENSOR_STS21
+    STS21Sensor     _missionSensor;
 #endif  // AMBASAT_MISSION_SENSOR
 
     uint8_t _buffer[7];

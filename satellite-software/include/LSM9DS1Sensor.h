@@ -24,6 +24,7 @@ private:
     void setSensorConfig(void);
     void setSensorValueAtBufferLocation(float sensor_value, uint8_t index);
 protected:
+    virtual uint8_t i2cAutoIncrementBit(void) const         { return 7; }
 
     // this only works for the acceleration and gyro part of the sensor.
     // normally should use explicit addressing in i2c calls.
