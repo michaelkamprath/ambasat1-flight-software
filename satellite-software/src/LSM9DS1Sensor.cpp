@@ -45,7 +45,7 @@ LSM9DS1Sensor::LSM9DS1Sensor(PersistedConfiguration& config)
     // Try to initialise and warn if we couldn't detect the chip
     if (!begin())
     {
-        Serial.println(F("ERROR: unable to initialize the LSM9DS1. Check your wiring!"));
+        Serial.println(F("ERROR: unable to initialize the LSM9DS1."));
         setIsFound(false);
     } else {
         Serial.println(F("Found LSM9DS1 9DOF"));
@@ -61,7 +61,9 @@ LSM9DS1Sensor::~LSM9DS1Sensor()
 bool LSM9DS1Sensor::begin(void)
 {
     // reset
-    writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG8, 0x05);
+    if (!writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG8, 0x05)) {
+        return false;
+    }
     writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M, 0x0c);
 
     delay(10);

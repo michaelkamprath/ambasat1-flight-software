@@ -56,7 +56,7 @@ bool STS21Sensor::begin(void)
     int32_t snb = serialNumber[5]*256*256*256 + serialNumber[4]*256*256 + serialNumber[3]*256 + serialNumber[2];
     uint16_t snc = serialNumber[1]*256 + serialNumber[0];
 
-    Serial.print(F("Found SHT21 sensor with serial number = "));
+    Serial.print(F("Found STS21 sensor with serial number = "));
     Serial.print(sna, HEX);
     Serial.print(F("-"));
     Serial.print(snb, HEX);

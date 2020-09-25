@@ -28,47 +28,85 @@ SensorBase::~SensorBase()
 
 }
 
-bool SensorBase::writeData(uint8_t deviceAddress, uint8_t data)
+uint8_t SensorBase::calculatCRC(const uint8_t* bytes, uint8_t nbrOfBytes, uint16_t polynomial)
+{
+    uint8_t crc = 0xFF; // calculated checksum
+    // calculates 8-Bit checksum with given polynomial
+    for(uint8_t byteCtr = 0; byteCtr < nbrOfBytes; byteCtr++)
+    {
+        crc ^= (bytes[byteCtr]);
+        for(uint8_t bit = 8; bit > 0; --bit)
+        {
+            if(crc & 0x80) crc = (crc << 1) ^ polynomial;
+            else           crc = (crc << 1);
+        }
+    }
+    return crc;
+}
+
+
+bool SensorBase::writeData(uint8_t deviceAddress, uint8_t data, bool sendStop)
+{
+    return writeData(deviceAddress, &data, 1);
+}
+
+bool SensorBase::writeData(uint8_t deviceAddress, const uint8_t* data, size_t length, bool sendStop, bool acceptNACKAtEnd )
 {
     if (deviceAddress == 0xFF) {
         // this is not a i2c sensor
         return false;
     }    
     Wire.beginTransmission(deviceAddress);
-    if (Wire.write(data) != 1) {
-        Serial.print(F("ERROR writing data - writeData( 0x"));
-        Serial.print(deviceAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(data, HEX);
-        Serial.print(F(" )\n"));
-        return false;
+
+    for (size_t i = 0; i < length; i++)
+    {
+        if (Wire.write(data[i]) != 1) {
+            Serial.print(F("ERROR writing data on byte "));
+            Serial.print(i);
+            Serial.print(F(" of data buffer. Device address = 0x"));
+            Serial.print(deviceAddress, HEX);
+            Serial.print(F(", data value = 0x"));
+            Serial.print(data[i], HEX);
+            Serial.print(F("\n"));
+            return false;
+        }
+        delay(1);
     }
-    if (Wire.endTransmission() != 0) {
-        Serial.print(F("ERROR ending transmission - writeData( 0x"));
+    uint8_t err = Wire.endTransmission(sendStop);
+    if (err != 0 && ((!acceptNACKAtEnd) || (acceptNACKAtEnd&&(err != 3)) ) ) {
+        Serial.print(F("ERROR ending transmission - writeData, error = "));
+        Serial.print(err);
+        Serial.print(F(", device address = 0x"));
         Serial.print(deviceAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(data, HEX);
-        Serial.print(F(" )\n"));
+        Serial.print(F("\n"));
         return false;
     }
 
     return true;
 }
-bool SensorBase::readData(uint8_t deviceAddress, uint8_t* data, size_t length)
+
+bool SensorBase::readData(uint8_t deviceAddress, uint8_t* data, uint8_t length, bool sendStop)
 {
     if (deviceAddress == 0xFF) {
         // this is not a i2c sensor
         return false;
     }
-
-    if (Wire.requestFrom(deviceAddress, length) != length) {
+    Wire.requestFrom(deviceAddress, length, (uint8_t)sendStop);
+    uint32_t startTime = millis();
+    while ((Wire.available() < (int)length) && (millis() - startTime < 100)) {
+        // waitng for the data
+        delay(1);
+    }
+    if (Wire.available() != length) {
         Serial.print(F("ERROR requesting data - readData( 0x"));
         Serial.print(deviceAddress, HEX);
         Serial.print(F(", 0x"));
         Serial.print((size_t)data, HEX);
         Serial.print(F(", "));
         Serial.print(length);
-        Serial.print(F(" )\n"));
+        Serial.print(F(" ), only got "));
+        Serial.print(Wire.available());
+        Serial.print(F(" bytes.\n"));
         return false;
     }
 
@@ -76,16 +114,6 @@ bool SensorBase::readData(uint8_t deviceAddress, uint8_t* data, size_t length)
         *data++ = Wire.read();
     }
 
-    if (Wire.endTransmission() != 0) {
-        Serial.print(F("ERROR ending transmission #2 - readData( 0x"));
-        Serial.print(deviceAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print((size_t)data, HEX);
-        Serial.print(F(", "));
-        Serial.print(length);
-        Serial.print(F(" )\n"));
-        return false;
-    }
     return true;
 }
 

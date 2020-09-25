@@ -25,9 +25,10 @@ protected:
 
     // normally you wouldn't call this directly. But in some cases you will if the sensor has
     // multiple i2c addresses. 
-    bool writeData(uint8_t deviceAddress, uint8_t data);
+    bool writeData(uint8_t deviceAddress, uint8_t data, bool sendStop = true);
+    bool writeData(uint8_t deviceAddress, const uint8_t* data, size_t length, bool sendStop = true, bool acceptNACKAtEnd = false);
     bool writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value);
-    bool readData(uint8_t deviceAddress, uint8_t* data, size_t length);
+    bool readData(uint8_t deviceAddress, uint8_t* data, uint8_t length, bool sendStop = true );
     int readRegister(uint8_t slaveAddress, uint8_t address);
     bool readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length);
 
@@ -47,12 +48,15 @@ public:
     // Override to reflect specific sensor confiuration.  
     virtual bool isActive(void) const           { return isFound(); }
 
+    uint8_t calculatCRC(const uint8_t* bytes, uint8_t length, uint16_t polynomial);
+
     //
     // I2C methods - use these to interact with the i2c bus.
     //
-    bool writeData(uint8_t data)                                         { return writeData(i2cDeviceAddress(), data); }
+    bool writeData(uint8_t data, bool sendStop = true)                              { return writeData(i2cDeviceAddress(), data, sendStop); }
+    bool writeData(const uint8_t* data, size_t length, bool sendStop = true )       { return writeData(i2cDeviceAddress(), data, length, sendStop); }
     bool writeRegister(uint8_t address, uint8_t value)                   { return writeRegister(i2cDeviceAddress(), address, value); }
-    bool readData(uint8_t* data, size_t length)                          { return readData(i2cDeviceAddress(), data, length); }
+    bool readData(uint8_t* data, uint8_t length, bool sendStop = true )      { return readData(i2cDeviceAddress(), data, length, sendStop); }
     int readRegister(uint8_t address)                                    { return readRegister(i2cDeviceAddress(), address); }                          
     bool readRegisters(uint8_t address, uint8_t* data, size_t length)    { return readRegisters(i2cDeviceAddress(), address, data, length); }
 };
