@@ -3,7 +3,6 @@
 #include "Utilities.h"
 
 #define STS21_CMD_GET_TEMPERATURE_NOHOLD        0b11110011
-#define STS21_CMD_GET_HUMIDITY_NOHOLD           0b11110101
 #define STS21_CMD_SOFT_RESET                    0b11111110
 #define STS21_CMD_READ_REGISTER                 0b11100111
 #define STS21_CMD_WRITE_REGISTER                0b11100110
@@ -87,13 +86,12 @@ const uint8_t* STS21Sensor::getCurrentMeasurementBuffer(void)
     //
     // The buffer format is:
     //      temeprature reading - uint16_t  (with status bits masked)
-    //      humidity reading - uint16_t  (with status bits masked)
     //      sensor status byte - uint8_t
     //
-    //  a total of 5 bytes
+    //  a total of 3 bytes
     //
    
-    uint8_t i2cBuffer[4];
+    uint8_t i2cBuffer[3];
 
     writeData(STS21_CMD_GET_TEMPERATURE_NOHOLD);
     delay(85);
@@ -106,32 +104,17 @@ const uint8_t* STS21Sensor::getCurrentMeasurementBuffer(void)
     float temp = -46.85 + 175.72*((float)tempReading)/65536.0;
     hton_int16(tempReading, &_buffer[0]);
 
-    writeData(STS21_CMD_GET_HUMIDITY_NOHOLD);
-    delay(29);
-    if (!readData(i2cBuffer,3)) {
-        Serial.println(F("ERROR reading humidity from STS21"));
-        return nullptr;
-    }
-    i2cBuffer[1] &= 0b11111100;     // clear sttus bits
-    uint16_t humidReading = ((uint16_t)i2cBuffer[0])*256 + i2cBuffer[1];
-    float humidity = -6.0 + 125.0*((float)humidReading)/65536.0;
-    hton_int16(humidReading, &_buffer[2]);
-
     writeData(STS21_CMD_READ_REGISTER);
     if (!readData(i2cBuffer,1)) {
         Serial.println(F("ERROR reading sensor status from STS21"));
         return nullptr;
     }
-    _buffer[4] = i2cBuffer[0];
+    _buffer[2] = i2cBuffer[0];
 
     Serial.print(F("    Temperature reading = "));
     Serial.print(temp);
     Serial.print(F(" °C ( 0x"));
     Serial.print(tempReading, HEX);   
-    Serial.print(F(" ), humidity = "));
-    Serial.print(humidity);
-    Serial.print(F(" % ( 0x"));
-    Serial.print(humidReading, HEX); 
     Serial.print(F(" ), sensor status = 0x"));
     Serial.print(i2cBuffer[0], HEX); 
     Serial.print(F("\n"));

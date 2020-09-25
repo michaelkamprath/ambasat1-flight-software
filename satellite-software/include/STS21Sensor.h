@@ -7,8 +7,8 @@ class PersistedConfiguration;
 class STS21Sensor : public SensorBase
 {
 private:
-    uint8_t _buffer[5];
-    
+    uint8_t _buffer[3];
+
     bool begin(void);
     void reset(void);
     
@@ -23,7 +23,7 @@ public:
     virtual void setup(void);
     virtual bool isActive(void) const;
     virtual const uint8_t* getCurrentMeasurementBuffer(void);
-    virtual uint8_t getMeasurementBufferSize() const            { return 5; }
+    virtual uint8_t getMeasurementBufferSize() const            { return 3; }
     virtual uint8_t getPort() const                             { return 4; }
 
 };

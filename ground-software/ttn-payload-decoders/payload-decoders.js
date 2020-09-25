@@ -136,7 +136,7 @@ function DecodeLSM9DS1Sensor(bytes) {
 
 function DecodeSTS21Sensor(bytes) {
 	// STS21 sensor
-	if (bytes.length !== 5) {
+	if (bytes.length !== 3) {
 		return {
 			error: "payload length is not correct size",
 			port: port,
@@ -144,8 +144,7 @@ function DecodeSTS21Sensor(bytes) {
 		};
 	}
 	var tempReading = convertTwoBytesToSignedInt(bytes[0], bytes[1]);
-	var humidReading = convertTwoBytesToSignedInt(bytes[2], bytes[3]);
-	var statusByte = bytes[4];
+	var statusByte = bytes[2];
 	var measurementResolutionBits = 0;
 	switch (statusByte&0x81) {
 		case 0x00:
@@ -166,13 +165,11 @@ function DecodeSTS21Sensor(bytes) {
 	}
 	
 	var temperature = -46.85 + 175.72*tempReading/65536.0;
-	var humidity = -6.0 + 125.0*humidReading/65536.0;
 	var endOfBattery = Boolean(statusByte&0x40 > 0);
 	var onChipHeaterEnabled = Boolean(statusByte&0x04 > 0);
 	
 	return {
 		temperature: temperature,
-		humidity: humidity,
 		end_of_battery: endOfBattery,
 		on_chip_heater: onChipHeaterEnabled,
 		measurement_resolution: measurementResolutionBits
