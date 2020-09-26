@@ -127,15 +127,14 @@ void AmbaSat1App::setup()
     LMIC_setDrTxpow(DR_SF7, 14);
 
     //
-    // Finished Setting up. Tun LED off
-    //
-    digitalWrite(LED_PIN, LOW);
-
-    //
     // set the LMIC uplink frame count
     //
     LMIC.seqnoUp = _config.getUplinkFrameCount();
 
+    //
+    // Finished Setting up. Tun LED off
+    //
+    digitalWrite(LED_PIN, LOW);
 }
 
 void AmbaSat1App::loop() 
@@ -165,6 +164,7 @@ void AmbaSat1App::loop()
         }
         _sleeping = false;
     }
+    digitalWrite(LED_PIN, LOW);
     //
     // technically there is some risk that the satellite will loose power between
     // the first transmission above and the last one, and in such case we will not
@@ -172,7 +172,6 @@ void AmbaSat1App::loop()
     // number of time we write to EEPROM.
     //
     _config.setUplinkFrameCount(LMIC.seqnoUp);
-    digitalWrite(LED_PIN, LOW);
     for (int i=0; i < SLEEPCYCLES; i++)
     {
         LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);    //sleep 8 seconds * sleepcycles

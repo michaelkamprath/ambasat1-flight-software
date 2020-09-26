@@ -67,37 +67,74 @@ bool SHT30Sensor::sendCommand(uint16_t cmd, bool acceptNACKAtEnd )
     // and ACK. This generates and error = 3 in the Wire library when ending transimission. The argument
     // acceptNACKAtEnd determines if the we expect an NACK in repsonse, and then tell SensorBase that getting a 
     // NACK on data transfer is OK.
+    uint8_t buffer[2];
+    buffer[0] = cmd >> 8;
+    buffer[1] = cmd&0xFF;
 
-    return writeData(i2cDeviceAddress(), (const uint8_t*)&cmd, 2, false, acceptNACKAtEnd);
+    return writeData(i2cDeviceAddress(), buffer, 2, true, acceptNACKAtEnd);
+}
+
+bool SHT30Sensor::readTwoBytesAndCRC(uint16_t* outValue)
+{
+    uint8_t buffer[3];
+    if (!readData(buffer, 3)) {
+        return false;
+    }
+    if (calculatCRC(buffer, 2, SHT30_CRC_POLYNOMIAL) != buffer[2]) {
+        return false;
+    }
+
+    *outValue = (uint16_t)buffer[0]*256 + buffer[1];
+    return true;
 }
 
 uint16_t  SHT30Sensor::readStatus(void)
 {
-    uint8_t buffer[3];
-    sendCommand(SHT30_CMD_READ_STATUS, true);
-    if (!readData(buffer, 3, false)) {
-        return 0xFFFF;
+    uint16_t statusValue = 0xFFFF;
+    sendCommand(SHT30_CMD_READ_STATUS);
+    if (!readTwoBytesAndCRC(&statusValue)) {
+        Serial.println("ERROR: failed CRC check when reading two bytes from SHT30");
     }
-    if (calculatCRC(buffer, 2, SHT30_CRC_POLYNOMIAL) != buffer[2]) {
-        Serial.println(F("ERROR: CRC didn't match when readding SHT30 status."));
-        return 0xFFFF;
-    }
-    return (uint16_t)buffer[0]*256 + buffer[1];
+    return statusValue;
 }
 
+// returns true if the alert status for brownout reboots. In such a 
+// case, the sensor configuration would need to be reloaded.
+bool SHT30Sensor::checkRestartAlertStatus(void)
+{
+    uint16_t status = readStatus();
+    if ((status&0x0010) > 0) {
+        // a brownout reboot has occured. Clear alert state.
+        Serial.println(F("SHT30 has had a brownout reboot. Clearing alerts."));
+        sendCommand(SHT30_CMD_CLEAR_STATUS);
+        return true;
+    }
+    return false;
+}
 bool SHT30Sensor::begin(void)
 {
-    Wire.endTransmission();
     reset();
+    checkRestartAlertStatus();
 
-    uint_fast16_t status = readStatus();
+    sendCommand(SHT30_CMD_READ_SERIALNBR);
+    uint8_t buffer[6];
+    if (!readData(buffer, 6)) {
+        return false;
+    }
+    if (
+        (calculatCRC(&buffer[0], 2, SHT30_CRC_POLYNOMIAL) != buffer[2])
+        ||(calculatCRC(&buffer[3], 2, SHT30_CRC_POLYNOMIAL) != buffer[5])
+    ) {
+        Serial.println(F("ERROR: CRC check failed when reading SHT30 serial number."));
+        return false;
+    }
+    uint16_t serialHigh = (uint16_t)buffer[0]*256 + buffer[1];
+    uint16_t serialLow = (uint16_t)buffer[3]*256 + buffer[4];
 
-    if (status == 0xFFFF) {
-         return false;
-    } 
-
-    Serial.print(F("Found SHT30 with status = 0x"));
-    Serial.print(status);
+    Serial.print(F("Found SHT30 sensor with serial number = "));
+    Serial.print(serialHigh, HEX);
+    Serial.print(F("-"));
+    Serial.print(serialLow, HEX);
     Serial.print(F("\n"));
     return true;
 }
@@ -113,17 +150,76 @@ void SHT30Sensor::reset(void)
 
 void SHT30Sensor::setup(void)
 {
-    reset();
-
+    // The sensor will be used in single shot mode. Not much to set up here.
 }
 bool SHT30Sensor::isActive(void) const
 {
-//    return SensorBase::isActive();
-    return false;
+    return SensorBase::isActive();
 }
 
 const uint8_t* SHT30Sensor::getCurrentMeasurementBuffer(void)
 {
+    bool browoutRestartAlert = false;
 
-    return nullptr;
+    if (checkRestartAlertStatus()) {
+        setup();
+        browoutRestartAlert = true;
+    }
+    if (!sendCommand(SHT30_CMD_MEAS_CLOCKSTR_H)) {
+        Serial.println(F("ERROR: Could not send single shot measurement command to SHT30"));
+        return nullptr;
+    }
+    // need to wait for the measurement to be done.
+    delay(500);
+
+    uint8_t localBuffer[6];
+    if (!readData(localBuffer, 6)) {
+        Serial.println(F("ERROR: Failed to read measurement data from SHT30"));
+        return nullptr;
+    }
+     if (
+        (calculatCRC(&localBuffer[0], 2, SHT30_CRC_POLYNOMIAL) != localBuffer[2])
+        ||(calculatCRC(&localBuffer[3], 2, SHT30_CRC_POLYNOMIAL) != localBuffer[5])
+    ) {
+        Serial.println(F("ERROR: CRC check failed when reading SHT30 measurement."));
+        return nullptr;
+    }
+    uint16_t temperatureReading = (uint16_t)localBuffer[0]*256 + localBuffer[1];
+    uint16_t humidityReading = (uint16_t)localBuffer[3]*256 + localBuffer[4];
+   
+    float temperature = -45.0 + 175.0*((float)temperatureReading)/65535.0;
+    float humidity = 100.0*((float)humidityReading)/65535.0;
+    
+    Serial.print(F("    SHT30 readings are: temperature = "));
+    Serial.print(temperature);
+    Serial.print(F(" °C, humidity = "));
+    Serial.print(humidity);
+    Serial.print(F("%\n"));
+
+    //
+    // Buffer format is:
+    //
+    //     uint16_t     temeperature reading
+    //     uint16_t     humidity reading
+    //     uint8_t      status byte, with this format:
+    //          bit 7 = 1 if there was a brown out restart alert at the start of this method
+    //          bit 6 = Heater status
+    //          bit 5 = RH Tracking Alert
+    //          bit 4 = Temp Tracking Alert
+    //          bits 3-0 = reserved
+    //  Total byts = 5
+    //
+    uint16_t status = readStatus();
+    hton_int16(temperatureReading, &_buffer[0]);
+    hton_int16(humidityReading, &_buffer[2]);
+    _buffer[4] = 0;
+    // brownout restart alert
+    if (browoutRestartAlert) _buffer[4] |= 0b10000000;
+    // heater status
+    if ((status&0x2000) > 0) _buffer[4] |= 0b01000000;
+    // RH Tracking Alert
+    if ((status&0x0800) > 0) _buffer[4] |= 0b00100000;
+    // Temp Tracking Alert
+    if ((status&0x0400) > 0) _buffer[4] |= 0b00010000;
+    return _buffer;
 }

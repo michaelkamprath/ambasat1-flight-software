@@ -9,15 +9,18 @@ SensorBase::SensorBase(PersistedConfiguration& config)
       _config(config)
 {
     if (!_isI2CSetUp) {
-        Serial.println("Begin Wire");
+        Serial.println(F("Begin Wire"));
         Wire.begin(); //I'm the master
-        delay(50); // Some sensors have a start up time of at least 25 ms
-        // Global I2C reset
-        Serial.println("Global I2C reset");
-        Wire.beginTransmission(0x06); // global i2c reset address
-        Wire.endTransmission(); 
-        delay(50); // wait for everything to reboot
-
+        delay(300); // Some sensors have a start up time of at least 25 ms
+        // // Global I2C reset
+        // Serial.println(F("Global I2C reset"));
+        // Wire.beginTransmission(0x00); // global i2c reset address
+        // Wire.write(0x06);
+        // Serial.println(F("    ... reset sent."));
+        // Wire.endTransmission(false); 
+        // Serial.println(F("    ... trnsmission ended"));
+        // delay(50); // wait for everything to reboot
+        Serial.println(F("I2C Wire has been set up."));
         _isI2CSetUp = true;
     }
 
@@ -113,6 +116,8 @@ bool SensorBase::readData(uint8_t deviceAddress, uint8_t* data, uint8_t length, 
     for (size_t i = 0; i < length; i++) {
         *data++ = Wire.read();
     }
+
+    Wire.endTransmission();
 
     return true;
 }

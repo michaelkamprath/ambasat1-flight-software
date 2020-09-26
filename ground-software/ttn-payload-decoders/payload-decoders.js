@@ -134,6 +134,32 @@ function DecodeLSM9DS1Sensor(bytes) {
 	};
 }
 
+function DecodeSHT30Sensor(bytes) {
+	// SHT30 sensor
+	if (bytes.length !== 5) {
+		return {
+			error: "payload length is not correct size",
+			port: port,
+			length: bytes.length 
+		};
+	}
+	var tempReading = convertTwoBytesToSignedInt(bytes[0], bytes[1]);
+	var humidityReading = convertTwoBytesToSignedInt(bytes[2], bytes[3]);
+	var sensorBrownoutReboot = Boolean((bytes[4]&0x80) > 0);
+	var heaterStatus = Boolean((bytes[4]&0x40) > 0);
+	var humidityTrackingAlert = Boolean((bytes[4]&0x20) > 0);
+	var temperatureTrackingAlert = Boolean((bytes[4]&0x10) > 0);
+	
+	return {
+		temperature: (-45.0 + 175.0*tempReading/65535.0),
+		humidity: (100.0*humidityReading/65535.0),
+		sensor_brownout_reboot: sensorBrownoutReboot,
+		heater_status: heaterStatus,
+		humidity_alert: humidityTrackingAlert,
+		temperature_alert: temperatureTrackingAlert
+	};
+}
+
 function DecodeSTS21Sensor(bytes) {
 	// STS21 sensor
 	if (bytes.length !== 3) {
@@ -171,9 +197,9 @@ function DecodeSTS21Sensor(bytes) {
 	return {
 		temperature: temperature,
 		end_of_battery: endOfBattery,
-		on_chip_heater: onChipHeaterEnabled,
+		heater_status: onChipHeaterEnabled,
 		measurement_resolution: measurementResolutionBits
-	}
+	};
 }
 
 function DecodeSI1132Sensor(bytes) {
@@ -198,6 +224,8 @@ function Decoder(bytes, port) {
 		return DecodeSatelliteStatus(bytes);
 	} else if (port === 2 ) {
 		return DecodeLSM9DS1Sensor(bytes);
+	} else if (port === 3 ) {
+		return DecodeSHT30Sensor(bytes);
 	} else if (port === 4 ) {
 		return DecodeSTS21Sensor(bytes);
 	} else if (port === 8 ) {
