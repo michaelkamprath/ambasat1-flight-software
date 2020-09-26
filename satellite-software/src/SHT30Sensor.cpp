@@ -80,7 +80,7 @@ bool SHT30Sensor::readTwoBytesAndCRC(uint16_t* outValue)
     if (!readData(buffer, 3)) {
         return false;
     }
-    if (calculatCRC(buffer, 2, SHT30_CRC_POLYNOMIAL) != buffer[2]) {
+    if (calculateCRC(buffer, 2, SHT30_CRC_POLYNOMIAL) != buffer[2]) {
         return false;
     }
 
@@ -122,8 +122,8 @@ bool SHT30Sensor::begin(void)
         return false;
     }
     if (
-        (calculatCRC(&buffer[0], 2, SHT30_CRC_POLYNOMIAL) != buffer[2])
-        ||(calculatCRC(&buffer[3], 2, SHT30_CRC_POLYNOMIAL) != buffer[5])
+        (calculateCRC(&buffer[0], 2, SHT30_CRC_POLYNOMIAL) != buffer[2])
+        ||(calculateCRC(&buffer[3], 2, SHT30_CRC_POLYNOMIAL) != buffer[5])
     ) {
         Serial.println(F("ERROR: CRC check failed when reading SHT30 serial number."));
         return false;
@@ -178,8 +178,8 @@ const uint8_t* SHT30Sensor::getCurrentMeasurementBuffer(void)
         return nullptr;
     }
      if (
-        (calculatCRC(&localBuffer[0], 2, SHT30_CRC_POLYNOMIAL) != localBuffer[2])
-        ||(calculatCRC(&localBuffer[3], 2, SHT30_CRC_POLYNOMIAL) != localBuffer[5])
+        (calculateCRC(&localBuffer[0], 2, SHT30_CRC_POLYNOMIAL) != localBuffer[2])
+        ||(calculateCRC(&localBuffer[3], 2, SHT30_CRC_POLYNOMIAL) != localBuffer[5])
     ) {
         Serial.println(F("ERROR: CRC check failed when reading SHT30 measurement."));
         return nullptr;

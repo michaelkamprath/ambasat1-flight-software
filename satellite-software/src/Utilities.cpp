@@ -44,3 +44,19 @@ void print_buffer( const uint8_t* buffer, uint8_t bufffer_size)
         }
     }
 }
+
+uint8_t calculateCRC(const uint8_t* bytes, uint8_t nbrOfBytes, uint16_t polynomial)
+{
+    uint8_t crc = 0xFF; // calculated checksum
+    // calculates 8-Bit checksum with given polynomial
+    for(uint8_t byteCtr = 0; byteCtr < nbrOfBytes; byteCtr++)
+    {
+        crc ^= (bytes[byteCtr]);
+        for(uint8_t bit = 8; bit > 0; --bit)
+        {
+            if(crc & 0x80) crc = (crc << 1) ^ polynomial;
+            else           crc = (crc << 1);
+        }
+    }
+    return crc;
+}

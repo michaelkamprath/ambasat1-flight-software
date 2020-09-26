@@ -48,8 +48,6 @@ public:
     // Override to reflect specific sensor confiuration.  
     virtual bool isActive(void) const           { return isFound(); }
 
-    uint8_t calculatCRC(const uint8_t* bytes, uint8_t length, uint16_t polynomial);
-
     //
     // I2C methods - use these to interact with the i2c bus.
     //

@@ -9,4 +9,7 @@ void hton_int32(int32_t x, uint8_t* val_buffer );
 
 // Prints the passed buffer to serial in a human-readable format
 void print_buffer( const uint8_t* buffer, uint8_t size);
+
+// calculate a CRC on a given block of data using a specified polynomial
+uint8_t calculateCRC(const uint8_t* bytes, uint8_t nbrOfBytes, uint16_t polynomial);
 #endif

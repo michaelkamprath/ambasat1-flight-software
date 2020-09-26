@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <avr/io.h>
 #include <avr/eeprom.h>
-#include <CRC32.h>
 #include "PersistedConfiguration.h"
+#include "Utilities.h"
 
 //
 // EEPROM Addresses for config Items
@@ -31,7 +31,7 @@ PersistedConfiguration::PersistedConfiguration()
     setRebootCount(_rebootCount+1);
 }
 
-uint32_t PersistedConfiguration::calculateCRC(void) const
+uint32_t PersistedConfiguration::getCRC(void) const
 {
     // build data buffer
     uint8_t buffer[CONFIG_DATA_BLOCK_SIZE];
@@ -42,19 +42,19 @@ uint32_t PersistedConfiguration::calculateCRC(void) const
     buffer[OFFSET_GYRO_SENSITIVITY] = _gyroSensitivity;
     buffer[OFFSET_MAGNETIC_SENSITIVITY] = _magneticSensitivity;
 
-    return CRC32::calculate(buffer, CONFIG_DATA_BLOCK_SIZE);
+    return calculateCRC(buffer, CONFIG_DATA_BLOCK_SIZE, 0x0131);
 }
 
 void PersistedConfiguration::updateCRC(void)
 {
-    uint32_t crc_value = calculateCRC();
+    uint32_t crc_value = getCRC();
     eeprom_update_dword((uint32_t*)CONFIG_CRC_ADDR, crc_value);
 }
 
 bool PersistedConfiguration::checkCRC(void) const 
 {
     uint32_t saved_crc_value = eeprom_read_dword((uint32_t*)CONFIG_CRC_ADDR);
-    return (saved_crc_value == calculateCRC());
+    return (saved_crc_value == getCRC());
 }
 bool PersistedConfiguration::isEEPROMErased(void) const
 {

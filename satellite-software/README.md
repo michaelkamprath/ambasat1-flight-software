@@ -3,7 +3,7 @@ This repository contains the flight software for the AmbaSat-1 developped my Mic
 
 * Maximize Telemetry Recieved - We are all building these AmbaSat-1 devices because it is cool, and the climax of our efforts will be when we receive from space telemetry from the satellite we built. I want to maximize that. Of course, there are contraints to be considered, like fair use of The Things Network (TTN), but within those constraints I want to get as much data as I can possibly can.
 * Robustness - Space is a harsh operating environement. Furthermore, launches can jostle satellites and break components. I want my satellite to do the best it can despite damage incured during ascent or in orbit. This means being tolerant of sensor failures and even doing on board testing.  Of course, software can't compensate for catrosophic hardware failures, but the software should strive to maximize data recieved by working around a malfunctioning sensor (if it has one).
-* Keep the Code clean and Understandable - Software that is built from example code that itself was copy and pasted from other examples has a way of getting messy with vestigial code that serves no purpose. The goal here is to build the software from the up purpose built for the AmbaSat-1.
+* Keep the Code clean and Understandable - Software that is built from example code that itself was copy and pasted from other examples has a way of getting messy with vestigial code that serves no purpose. The goal here is to build the software from the ground up, purpose built for the AmbaSat-1.
 
 ## How to Use
 This software is ready to go for the AmbaSat basic sensors, Voltage and LSM9DS1, with minimal set up. To build this software for your AmbaSat-1, first do the following:

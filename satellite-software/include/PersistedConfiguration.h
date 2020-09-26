@@ -44,7 +44,7 @@ private:
 
     bool isEEPROMErased(void) const;
     void loadAllCongigurations(void);
-    uint32_t calculateCRC(void) const;
+    uint32_t getCRC(void) const;
     void updateCRC(void);
     bool checkCRC(void) const;
 
