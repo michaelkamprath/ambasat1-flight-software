@@ -12,6 +12,7 @@ docker build -t telemetry-service:latest .
 
 docker run -d -it \
     --name telemetry-service \
+    --restart unless-stopped \
     --mount type=bind,src=$DATA_FILE_DIR,dst=/run/telemetry \
     -p 8000:8000 \
     telemetry-service:latest
