@@ -2,6 +2,7 @@
 #include "LSM9DS1Sensor.h"
 #include "Utilities.h"
 #include "PersistedConfiguration.h"
+#include "Logging.h"
 
 //
 // LSM9DS1Sensor
@@ -45,10 +46,10 @@ LSM9DS1Sensor::LSM9DS1Sensor(PersistedConfiguration& config)
     // Try to initialise and warn if we couldn't detect the chip
     if (!begin())
     {
-        Serial.println(F("ERROR: unable to initialize the LSM9DS1."));
+        PRINTLN_ERROR(F("ERROR: unable to initialize the LSM9DS1."));
         setIsFound(false);
     } else {
-        Serial.println(F("Found LSM9DS1 9DOF"));
+        PRINTLN_INFO(F("Found LSM9DS1 9DOF"));
         setIsFound(true);
     }
  }
@@ -249,21 +250,21 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
 
     // acceleration
     if (!readRegisters(LSM9DS1_ADDRESS, LSM9DS1_OUT_X_XL, (uint8_t*)accelData, sizeof(accelData))) {
-        Serial.println(F("ERROR reading LSM9DS1 accel data"));
+        PRINTLN_ERROR(F("ERROR reading LSM9DS1 accel data"));
         return nullptr;
     }
 
     // gyro
     if (!readRegisters(LSM9DS1_ADDRESS, LSM9DS1_OUT_X_G, (uint8_t*)gyroData, sizeof(gyroData))) 
     {
-        Serial.println(F("ERROR reading LSM9DS1 gyro data"));
+        PRINTLN_ERROR(F("ERROR reading LSM9DS1 gyro data"));
         return nullptr;
     }
 
     // Magnetic 
     if (!readRegisters(LSM9DS1_ADDRESS_M, LSM9DS1_OUT_X_L_M, (uint8_t*)magneticData, sizeof(magneticData))) 
     {
-        Serial.println(F("ERROR reading LSM9DS1 magnetic data"));
+        PRINTLN_ERROR(F("ERROR reading LSM9DS1 magnetic data"));
         return nullptr;
     }
 

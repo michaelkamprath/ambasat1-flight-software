@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include "SensorBase.h"
 #include "PersistedConfiguration.h"
+#include "Logging.h"
 
 bool SensorBase::_isI2CSetUp = false;
 
@@ -9,18 +10,16 @@ SensorBase::SensorBase(PersistedConfiguration& config)
       _config(config)
 {
     if (!_isI2CSetUp) {
-        Serial.println(F("Begin Wire"));
+        PRINTLN_INFO(F("Starting I2C interface."));
         Wire.begin(); //I'm the master
         delay(300); // Some sensors have a start up time of at least 25 ms
-        // // Global I2C reset
-        // Serial.println(F("Global I2C reset"));
-        // Wire.beginTransmission(0x00); // global i2c reset address
-        // Wire.write(0x06);
-        // Serial.println(F("    ... reset sent."));
-        // Wire.endTransmission(false); 
-        // Serial.println(F("    ... trnsmission ended"));
-        // delay(50); // wait for everything to reboot
-        Serial.println(F("I2C Wire has been set up."));
+        // Global I2C reset
+        PRINTLN_DEBUG(F("Global I2C reset"));
+        Wire.beginTransmission(0x00); // global i2c reset address
+        Wire.write(0x06);
+        Wire.endTransmission(); 
+        delay(50); // wait for everything to reboot
+        PRINTLN_DEBUG(F("I2C Wire has been set up."));
         _isI2CSetUp = true;
     }
 
@@ -47,24 +46,24 @@ bool SensorBase::writeData(uint8_t deviceAddress, const uint8_t* data, size_t le
     for (size_t i = 0; i < length; i++)
     {
         if (Wire.write(data[i]) != 1) {
-            Serial.print(F("ERROR writing data on byte "));
-            Serial.print(i);
-            Serial.print(F(" of data buffer. Device address = 0x"));
-            Serial.print(deviceAddress, HEX);
-            Serial.print(F(", data value = 0x"));
-            Serial.print(data[i], HEX);
-            Serial.print(F("\n"));
+            PRINT_ERROR(F("ERROR writing data on byte "));
+            PRINT_ERROR(i);
+            PRINT_ERROR(F(" of data buffer. Device address = 0x"));
+            PRINT_HEX_ERROR(deviceAddress);
+            PRINT_DEBUG(F(", data value = 0x"));
+            PRINT_HEX_DEBUG(data[i]);
+            PRINT_ERROR(F("\n"));
             return false;
         }
         delay(1);
     }
     uint8_t err = Wire.endTransmission(sendStop);
     if (err != 0 && ((!acceptNACKAtEnd) || (acceptNACKAtEnd&&(err != 3)) ) ) {
-        Serial.print(F("ERROR ending transmission - writeData, error = "));
-        Serial.print(err);
-        Serial.print(F(", device address = 0x"));
-        Serial.print(deviceAddress, HEX);
-        Serial.print(F("\n"));
+        PRINT_ERROR(F("ERROR ending transmission - writeData, error = "));
+        PRINT_ERROR(err);
+        PRINT_ERROR(F(", device address = 0x"));
+        PRINT_HEX_ERROR(deviceAddress);
+        PRINT_ERROR(F("\n"));
         return false;
     }
 
@@ -84,15 +83,13 @@ bool SensorBase::readData(uint8_t deviceAddress, uint8_t* data, uint8_t length, 
         delay(1);
     }
     if (Wire.available() != length) {
-        Serial.print(F("ERROR requesting data - readData( 0x"));
-        Serial.print(deviceAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print((size_t)data, HEX);
-        Serial.print(F(", "));
-        Serial.print(length);
-        Serial.print(F(" ), only got "));
-        Serial.print(Wire.available());
-        Serial.print(F(" bytes.\n"));
+        PRINT_ERROR(F("ERROR requesting data from device address 0x"));
+        PRINT_HEX_ERROR(deviceAddress);
+        PRINT_DEBUG(F(", data length = "));
+        PRINT_DEBUG(length);
+        PRINT_DEBUG(F(", only got "));
+        PRINT_DEBUG(Wire.available());
+        PRINT_ERROR(F("n"));
         return false;
     }
 
@@ -114,31 +111,27 @@ int SensorBase::readRegister(uint8_t deviceAddress, uint8_t address)
     Wire.beginTransmission(deviceAddress);
     Wire.write(address);
     if (Wire.endTransmission() != 0) {
-        Serial.print(F("ERROR ending transmission #1 - readRegister( 0x"));
-        Serial.print(deviceAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(address, HEX);
-        Serial.print(F(" )\n"));
+        PRINT_ERROR(F("ERROR ending transmission device address = 0x"));
+        PRINT_HEX_ERROR(deviceAddress);
+        PRINT_ERROR(F(" (readRegister)\n"));
        return -1;
     }
 
     if (Wire.requestFrom(deviceAddress, (uint8_t)1) != 1) {
-        Serial.print(F("ERROR requesting data - readRegister( 0x"));
-        Serial.print(deviceAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(address, HEX);
-        Serial.print(F(" )\n"));
+        PRINT_ERROR(F("ERROR requesting data from device address 0x"));
+        PRINT_HEX_ERROR(deviceAddress);
+        PRINT_DEBUG(F(" at address 0x"));
+        PRINT_HEX_DEBUG(address);
+        PRINT_ERROR(F(" (readRegister)\n"));
         return -1;
     }
 
     int value = Wire.read();
 
     if (Wire.endTransmission() != 0) {
-        Serial.print(F("ERROR ending transmission #2 - readRegister( 0x"));
-        Serial.print(deviceAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(address, HEX);
-        Serial.print(F(" )\n"));
+        PRINT_ERROR(F("ERROR ending transmission #1 - device address = 0x"));
+        PRINT_HEX_ERROR(deviceAddress);
+        PRINT_ERROR(F(" (readRegister)\n"));
         return -1;
     }
 
@@ -158,28 +151,18 @@ bool SensorBase::readRegisters(uint8_t deviceAddress, uint8_t address, uint8_t* 
     }
     Wire.write(autoIncrementBit | address);
     if (Wire.endTransmission(false) != 0) {
-        Serial.print(F("ERROR ending transmission #1 - readRegister( 0x"));
-        Serial.print(deviceAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(address, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print((size_t)data, HEX);
-        Serial.print(F(", "));
-        Serial.print(length);
-        Serial.print(F(" )\n"));
+        PRINT_ERROR(F("ERROR ending transmission device address = 0x"));
+        PRINT_HEX_ERROR(deviceAddress);
+        PRINT_ERROR(F(" (readRegisters)\n"));
         return false;
     }
 
     if (Wire.requestFrom(deviceAddress, length) != length) {
-        Serial.print(F("ERROR requesting data - readRegister( 0x"));
-        Serial.print(deviceAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(address, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print((size_t)data, HEX);
-        Serial.print(F(", "));
-        Serial.print(length);
-        Serial.print(F(" )\n"));
+        PRINT_ERROR(F("ERROR requesting data from device address 0x"));
+        PRINT_HEX_ERROR(deviceAddress);
+        PRINT_DEBUG(F(" at address 0x"));
+        PRINT_HEX_DEBUG(address);
+        PRINT_ERROR(F(" (readRegisters)\n"));
         return false;
     }
 
@@ -188,15 +171,9 @@ bool SensorBase::readRegisters(uint8_t deviceAddress, uint8_t address, uint8_t* 
     }
 
     if (Wire.endTransmission() != 0) {
-        Serial.print(F("ERROR ending transmission #2 - readRegister( 0x"));
-        Serial.print(deviceAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(address, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print((size_t)data, HEX);
-        Serial.print(F(", "));
-        Serial.print(length);
-        Serial.print(F(" )\n"));
+        PRINT_ERROR(F("ERROR ending transmission device address = 0x"));
+        PRINT_HEX_ERROR(deviceAddress);
+        PRINT_ERROR(F(" (readRegisters)\n"));
         return false;
     }
     return true;
@@ -212,13 +189,9 @@ bool SensorBase::writeRegister(uint8_t deviceAddress, uint8_t address, uint8_t v
     Wire.write(address);
     Wire.write(value);
     if (Wire.endTransmission() != 0) {
-        Serial.print(F("ERROR ending transmission - writeRegister( 0x"));
-        Serial.print(deviceAddress, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(address, HEX);
-        Serial.print(F(", 0x"));
-        Serial.print(value, HEX);
-        Serial.print(F(" )\n"));
+        PRINT_ERROR(F("ERROR ending transmission device address = 0x"));
+        PRINT_HEX_ERROR(deviceAddress);
+        PRINT_ERROR(F(" (writeRegister)\n"));
         return false;
     }
 

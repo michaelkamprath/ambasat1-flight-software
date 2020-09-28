@@ -3,6 +3,7 @@
 #include <hal/hal.h>
 #include <LowPower.h>
 #include "Utilities.h"
+#include "Logging.h"
 
 //
 // Satellite Physical Setup
@@ -46,7 +47,7 @@ AmbaSat1App::AmbaSat1App()
 {
     if (AmbaSat1App::gApp != nullptr) {
         // complain loudly. Only one app object should be created.
-        Serial.println(F("ERROR - More than one AmbaSat1App object created."));
+        PRINT_ERROR(F("ERROR - More than one AmbaSat1App object created."));
     }
     else {
         AmbaSat1App::gApp = this;
@@ -140,7 +141,7 @@ void AmbaSat1App::setup()
 void AmbaSat1App::loop() 
 {
     digitalWrite(LED_PIN, HIGH);
-    Serial.println(F("Transmitting Satellite Status."));
+    PRINTLN_INFO(F("Transmitting Satellite Status."));
     sendSensorPayload(*this);
     while(!_sleeping) {
         os_runloop_once();
@@ -148,7 +149,7 @@ void AmbaSat1App::loop()
     _sleeping = false;
 
     if (_lsm9DS1Sensor.isActive()) {
-        Serial.println(F("Transmitting LSM9DS1 sensor."));
+        PRINTLN_INFO(F("Transmitting LSM9DS1 sensor."));
         sendSensorPayload(_lsm9DS1Sensor);
         while(!_sleeping) {
             os_runloop_once();
@@ -157,7 +158,7 @@ void AmbaSat1App::loop()
     }
 
     if (_missionSensor.isActive()) {
-        Serial.println(F("Transmitting Mission sensor."));
+        PRINTLN_INFO(F("Transmitting Mission sensor."));
         sendSensorPayload(_missionSensor);
         while(!_sleeping) {
             os_runloop_once();
@@ -182,14 +183,14 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
 {
     // wait for any in process transmission to end
     if (LMIC.opmode & OP_TXRXPEND) {
-        Serial.println(F("Current OP_TXRXPEND is running so skipping transmission"));
+        PRINTLN_INFO(F("Current OP_TXRXPEND is running so skipping transmission"));
         return;
     }
 
     const uint8_t* data_ptr = sensor.getCurrentMeasurementBuffer();
 
     if (data_ptr == nullptr) {
-        Serial.println(F("Sensor data is NULL."));
+        PRINTLN_INFO(F("Sensor data is NULL."));
         return;
     }
     LMIC_setTxData2(
@@ -198,15 +199,17 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
         sensor.getMeasurementBufferSize(),
         0
     ); 
-    Serial.print(F("    Sending payload = { "));
+#if LOG_LEVEL >= LOG_LEVEL_INFO
+    PRINT_INFO(F("    Sending payload = { "));
     for (uint8_t i = 0; i < sensor.getMeasurementBufferSize(); i++ ) {
-        Serial.print(F("0x"));
-        Serial.print( data_ptr[i], HEX);
+        PRINT_INFO(F("0x"));
+        PRINT_HEX_INFO( data_ptr[i]);
         if (i < sensor.getMeasurementBufferSize() - 1 ) {
-            Serial.print(F(", "));
+            PRINT_INFO(F(", "));
         }
     }
-    Serial.print(F(" }\n"));
+    PRINT_INFO(F(" }\n"));
+#endif
 }
 
 // initial job
@@ -237,35 +240,35 @@ void onEvent(ev_t ev)
     switch (ev)
     {
         case EV_SCAN_TIMEOUT:
-            Serial.println(F("EV_SCAN_TIMEOUT"));
+            PRINTLN_DEBUG(F("EV_SCAN_TIMEOUT"));
         break;
         case EV_BEACON_FOUND:
-            Serial.println(F("EV_BEACON_FOUND"));
+            PRINTLN_DEBUG(F("EV_BEACON_FOUND"));
         break;
         case EV_BEACON_MISSED:
-            Serial.println(F("EV_BEACON_MISSED"));
+            PRINTLN_DEBUG(F("EV_BEACON_MISSED"));
         break;
         case EV_BEACON_TRACKED:
-            Serial.println(F("EV_BEACON_TRACKED"));
+            PRINTLN_DEBUG(F("EV_BEACON_TRACKED"));
         break;
         case EV_JOINING:
-            Serial.println(F("EV_JOINING"));
+            PRINTLN_DEBUG(F("EV_JOINING"));
         break;
         case EV_JOINED:
-            Serial.println(F("EV_JOINED"));
+            PRINTLN_DEBUG(F("EV_JOINED"));
             // Disable link check validation (automatically enabled
             // during join, but not supported by TTN at this time).
             LMIC_setLinkCheckMode(0);
             digitalWrite(LED_PIN, LOW);
         break;
         case EV_RFU1:
-            Serial.println(F("EV_RFU1"));
+            PRINTLN_DEBUG(F("EV_RFU1"));
         break;
         case EV_JOIN_FAILED:
-            Serial.println(F("EV_JOIN_FAILED"));
+            PRINTLN_DEBUG(F("EV_JOIN_FAILED"));
         break;
         case EV_REJOIN_FAILED:
-            Serial.println(F("EV_REJOIN_FAILED"));
+            PRINTLN_DEBUG(F("EV_REJOIN_FAILED"));
             // Re-init
             os_setCallback(&initjob, initfunc);
         break;
@@ -296,30 +299,30 @@ void onEvent(ev_t ev)
                 }
             }
 
-            Serial.println(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
+            PRINTLN_INFO(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
             delay(50);  // delay to complete Serial Output before Sleeping
 
             // Schedule next transmission
             // next transmission will take place after next wake-up cycle in main loop
         break;
         case EV_LOST_TSYNC:
-            Serial.println(F("EV_LOST_TSYNC"));
+            PRINTLN_DEBUG(F("EV_LOST_TSYNC"));
         break;
         case EV_RESET:
-            Serial.println(F("EV_RESET"));
+            PRINTLN_DEBUG(F("EV_RESET"));
         break;
         case EV_RXCOMPLETE:
             // data received in ping slot
-            Serial.println(F("EV_RXCOMPLETE"));
+            PRINTLN_DEBUG(F("EV_RXCOMPLETE"));
         break;
         case EV_LINK_DEAD:
-            Serial.println(F("EV_LINK_DEAD"));
+            PRINTLN_DEBUG(F("EV_LINK_DEAD"));
         break;
         case EV_LINK_ALIVE:
-            Serial.println(F("EV_LINK_ALIVE"));
+            PRINTLN_DEBUG(F("EV_LINK_ALIVE"));
         break;
         default:
-            Serial.println(F("Unknown event"));
+            PRINTLN_DEBUG(F("Unknown event"));
         break;
     }
 }

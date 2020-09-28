@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "STS21Sensor.h"
 #include "Utilities.h"
+#include "Logging.h"
 
 #define STS21_CMD_GET_TEMPERATURE_NOHOLD        0b11110011
 #define STS21_CMD_SOFT_RESET                    0b11111110
@@ -13,7 +14,7 @@ STS21Sensor::STS21Sensor(PersistedConfiguration& config)
 {
     if (!begin())
     {
-        Serial.println(F("ERROR: unable to initialize the STS21"));
+        PRINTLN_ERROR(F("ERROR: unable to initialize the STS21"));
         setIsFound(false);
     } else {
         setIsFound(true);
@@ -56,13 +57,13 @@ bool STS21Sensor::begin(void)
     int32_t snb = serialNumber[5]*256*256*256 + serialNumber[4]*256*256 + serialNumber[3]*256 + serialNumber[2];
     uint16_t snc = serialNumber[1]*256 + serialNumber[0];
 
-    Serial.print(F("Found STS21 sensor with serial number = "));
-    Serial.print(sna, HEX);
-    Serial.print(F("-"));
-    Serial.print(snb, HEX);
-    Serial.print(F("-"));
-    Serial.print(snc, HEX);
-    Serial.print(F("\n"));
+    PRINT_INFO(F("Found STS21 sensor with serial number = "));
+    PRINT_HEX_INFO(sna);
+    PRINT_INFO(F("-"));
+    PRINT_HEX_INFO(snb);
+    PRINT_INFO(F("-"));
+    PRINT_HEX_INFO(snc);
+    PRINT_INFO(F("\n"));
     return true;
 }
 
@@ -96,7 +97,7 @@ const uint8_t* STS21Sensor::getCurrentMeasurementBuffer(void)
     writeData(STS21_CMD_GET_TEMPERATURE_NOHOLD);
     delay(85);
     if (!readData(i2cBuffer,3)) {
-        Serial.println(F("ERROR reading temperature from STS21"));
+        PRINTLN_ERROR(F("ERROR reading temperature from STS21"));
         return nullptr;
     }
     i2cBuffer[1] &= 0b11111100;     // clear sttus bits
@@ -106,17 +107,17 @@ const uint8_t* STS21Sensor::getCurrentMeasurementBuffer(void)
 
     writeData(STS21_CMD_READ_REGISTER);
     if (!readData(i2cBuffer,1)) {
-        Serial.println(F("ERROR reading sensor status from STS21"));
+        PRINTLN_ERROR(F("ERROR reading sensor status from STS21"));
         return nullptr;
     }
     _buffer[2] = i2cBuffer[0];
 
-    Serial.print(F("    Temperature reading = "));
-    Serial.print(temp);
-    Serial.print(F(" °C ( 0x"));
-    Serial.print(tempReading, HEX);   
-    Serial.print(F(" ), sensor status = 0x"));
-    Serial.print(i2cBuffer[0], HEX); 
-    Serial.print(F("\n"));
+    PRINT_DEBUG(F("    Temperature reading = "));
+    PRINT_DEBUG(temp);
+    PRINT_DEBUG(F(" °C ( 0x"));
+    PRINT_HEX_DEBUG(tempReading);   
+    PRINT_DEBUG(F(" ), sensor status = 0x"));
+    PRINT_HEX_DEBUG(i2cBuffer[0]); 
+    PRINT_DEBUG(F("\n"));
     return _buffer;
 }

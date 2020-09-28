@@ -3,6 +3,7 @@
 #include <avr/eeprom.h>
 #include "PersistedConfiguration.h"
 #include "Utilities.h"
+#include "Logging.h"
 
 //
 // EEPROM Addresses for config Items
@@ -68,7 +69,7 @@ bool PersistedConfiguration::isEEPROMErased(void) const
 
 void PersistedConfiguration::resetToDefaults(void)
 {
-    Serial.println(F("Setting device configuration to default values."));
+    PRINTLN_DEBUG(F("Setting device configuration to default values."));
 
     setRebootCount(0, false);
     setUplinkFrameCount(0, false);
@@ -85,7 +86,7 @@ void PersistedConfiguration::resetToDefaults(void)
 
 void PersistedConfiguration::loadAllCongigurations(void)
 {
-    Serial.println(F("Loading device configuration from EEPROM."));
+    PRINTLN_INFO(F("Loading device configuration from EEPROM."));
 
     _rebootCount = eeprom_read_dword((const uint32_t*)(CONFIG_EEPROM_BASE_ADDR+OFFSET_BOOT_COUNT));
     _uplinkFrameCount = eeprom_read_dword((const uint32_t*)(CONFIG_EEPROM_BASE_ADDR+OFFSET_UPLINK_FRAME_COUNT));
@@ -94,17 +95,17 @@ void PersistedConfiguration::loadAllCongigurations(void)
     _magneticSensitivity = (MagneticSensitivitySetting)eeprom_read_byte((uint8_t *)(CONFIG_EEPROM_BASE_ADDR+OFFSET_MAGNETIC_SENSITIVITY));
 
     if (checkCRC()) {
-        Serial.print(F("  Loaded configuration with:\n    reboot count = "));
-        Serial.print(_rebootCount);
-        Serial.print(F("\n    uplink frame count = "));
-        Serial.print(_uplinkFrameCount);
-        Serial.print(F("\n    LSM9DS1 accel = 0x"));
-        Serial.print(_accelSensitivity, HEX);
-        Serial.print(F("\n    LSM9DS1 gyro = 0x"));
-        Serial.print(_gyroSensitivity, HEX);
-        Serial.print(F("\n    LSM9DS1 magnetic = 0x"));
-        Serial.print(_magneticSensitivity, HEX);
-        Serial.print(F("\n"));
+        PRINT_DEBUG(F("  Loaded configuration with:\n    reboot count = "));
+        PRINT_DEBUG(_rebootCount);
+        PRINT_DEBUG(F("\n    uplink frame count = "));
+        PRINT_DEBUG(_uplinkFrameCount);
+        PRINT_DEBUG(F("\n    LSM9DS1 accel = 0x"));
+        PRINT_HEX_DEBUG(_accelSensitivity);
+        PRINT_DEBUG(F("\n    LSM9DS1 gyro = 0x"));
+        PRINT_HEX_DEBUG(_gyroSensitivity);
+        PRINT_DEBUG(F("\n    LSM9DS1 magnetic = 0x"));
+        PRINT_HEX_DEBUG(_magneticSensitivity);
+        PRINT_DEBUG(F("\n"));
     } else {
         // failed CRC check. Reset.
         Serial.println(F("  FAILED CRC check. Reseting configuration."));

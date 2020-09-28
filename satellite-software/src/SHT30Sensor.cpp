@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include "SHT30Sensor.h"
 #include "Utilities.h"
-
+#include "Logging.h"
 
 #define SHT30_CMD_READ_SERIALNBR    0x3780  // read serial number
 #define SHT30_CMD_READ_STATUS       0xF32D  // read status register
@@ -49,7 +49,7 @@ SHT30Sensor::SHT30Sensor(PersistedConfiguration& config)
 {
     if (!begin())
     {
-        Serial.println(F("ERROR: unable to initialize the SHT30"));
+        PRINTLN_ERROR(F("ERROR: unable to initialize the SHT30"));
         setIsFound(false);
     } else {
         setIsFound(true);
@@ -93,7 +93,7 @@ uint16_t  SHT30Sensor::readStatus(void)
     uint16_t statusValue = 0xFFFF;
     sendCommand(SHT30_CMD_READ_STATUS);
     if (!readTwoBytesAndCRC(&statusValue)) {
-        Serial.println("ERROR: failed CRC check when reading two bytes from SHT30");
+        PRINTLN_ERROR("ERROR: failed CRC check when reading two bytes from SHT30");
     }
     return statusValue;
 }
@@ -105,7 +105,7 @@ bool SHT30Sensor::checkRestartAlertStatus(void)
     uint16_t status = readStatus();
     if ((status&0x0010) > 0) {
         // a brownout reboot has occured. Clear alert state.
-        Serial.println(F("SHT30 has had a brownout reboot. Clearing alerts."));
+        PRINTLN_INFO(F("SHT30 has had a brownout reboot. Clearing alerts."));
         sendCommand(SHT30_CMD_CLEAR_STATUS);
         return true;
     }
@@ -125,17 +125,17 @@ bool SHT30Sensor::begin(void)
         (calculateCRC(&buffer[0], 2, SHT30_CRC_POLYNOMIAL) != buffer[2])
         ||(calculateCRC(&buffer[3], 2, SHT30_CRC_POLYNOMIAL) != buffer[5])
     ) {
-        Serial.println(F("ERROR: CRC check failed when reading SHT30 serial number."));
+        PRINTLN_ERROR(F("ERROR: CRC check failed when reading SHT30 serial number."));
         return false;
     }
     uint16_t serialHigh = (uint16_t)buffer[0]*256 + buffer[1];
     uint16_t serialLow = (uint16_t)buffer[3]*256 + buffer[4];
 
-    Serial.print(F("Found SHT30 sensor with serial number = "));
-    Serial.print(serialHigh, HEX);
-    Serial.print(F("-"));
-    Serial.print(serialLow, HEX);
-    Serial.print(F("\n"));
+    PRINT_INFO(F("Found SHT30 sensor with serial number = "));
+    PRINT_HEX_INFO(serialHigh);
+    PRINT_INFO(F("-"));
+    PRINT_HEX_INFO(serialLow);
+    PRINT_INFO(F("\n"));
     return true;
 }
 
@@ -166,7 +166,7 @@ const uint8_t* SHT30Sensor::getCurrentMeasurementBuffer(void)
         browoutRestartAlert = true;
     }
     if (!sendCommand(SHT30_CMD_MEAS_CLOCKSTR_H)) {
-        Serial.println(F("ERROR: Could not send single shot measurement command to SHT30"));
+        PRINTLN_ERROR(F("ERROR: Could not send single shot measurement command to SHT30"));
         return nullptr;
     }
     // need to wait for the measurement to be done.
@@ -174,14 +174,14 @@ const uint8_t* SHT30Sensor::getCurrentMeasurementBuffer(void)
 
     uint8_t localBuffer[6];
     if (!readData(localBuffer, 6)) {
-        Serial.println(F("ERROR: Failed to read measurement data from SHT30"));
+        PRINTLN_ERROR(F("ERROR: Failed to read measurement data from SHT30"));
         return nullptr;
     }
      if (
         (calculateCRC(&localBuffer[0], 2, SHT30_CRC_POLYNOMIAL) != localBuffer[2])
         ||(calculateCRC(&localBuffer[3], 2, SHT30_CRC_POLYNOMIAL) != localBuffer[5])
     ) {
-        Serial.println(F("ERROR: CRC check failed when reading SHT30 measurement."));
+        PRINTLN_ERROR(F("ERROR: CRC check failed when reading SHT30 measurement."));
         return nullptr;
     }
     uint16_t temperatureReading = (uint16_t)localBuffer[0]*256 + localBuffer[1];
@@ -190,11 +190,11 @@ const uint8_t* SHT30Sensor::getCurrentMeasurementBuffer(void)
     float temperature = -45.0 + 175.0*((float)temperatureReading)/65535.0;
     float humidity = 100.0*((float)humidityReading)/65535.0;
     
-    Serial.print(F("    SHT30 readings are: temperature = "));
-    Serial.print(temperature);
-    Serial.print(F(" °C, humidity = "));
-    Serial.print(humidity);
-    Serial.print(F("%\n"));
+    PRINT_DEBUG(F("    SHT30 readings are: temperature = "));
+    PRINT_DEBUG(temperature);
+    PRINT_DEBUG(F(" °C, humidity = "));
+    PRINT_DEBUG(humidity);
+    PRINT_DEBUG(F("%\n"));
 
     //
     // Buffer format is:
