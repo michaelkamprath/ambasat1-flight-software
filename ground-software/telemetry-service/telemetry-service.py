@@ -24,6 +24,7 @@ def ingest_telemetry(project):
         telemetry_data = ''
     data_dict = {
         'timestamp': time.time(),
+        'client_ip': request.environ.get('HTTP_X_FORWARDED_FOR') or request.environ.get('REMOTE_ADDR'),
         'request_headers':{}, 
         'request_url': request.url,
         'posted_data': telemetry_data
