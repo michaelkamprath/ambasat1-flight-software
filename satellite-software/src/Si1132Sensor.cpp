@@ -88,7 +88,8 @@ void Si1132Sensor::reset(void)
 
 bool Si1132Sensor::begin(void)
 {
-    uint8_t device_id = readRegister(SI1132_PART_ID_REG);
+    uint8_t device_id = 0;
+    readRegister(SI1132_PART_ID_REG, device_id);
 
     if (device_id != 0x32) {
         PRINT_ERROR(F("ERROR when initializing Si1132: device_id = 0x"));
@@ -96,8 +97,10 @@ bool Si1132Sensor::begin(void)
         PRINT_ERROR(F("\n"));
         return false;
     }
-    uint8_t revision_id = readRegister(SI1132_REV_ID_REG);
-    uint8_t sequence_id = readRegister(SI1132_SEQ_ID_REG);
+    uint8_t revision_id = 0;
+    uint8_t sequence_id = 0;
+    readRegister(SI1132_REV_ID_REG, revision_id);
+    readRegister(SI1132_SEQ_ID_REG, sequence_id);
     PRINT_INFO(F("Found Si1132 UV Light Sensor with revision ID = "));
     PRINT_INFO(revision_id);
     PRINT_INFO(F(", sequence ID = "));
@@ -166,7 +169,8 @@ void Si1132Sensor::setup(void)
 bool Si1132Sensor::waitUntilSleep(void) {
 
     for (int16_t i = 0; i < LOOP_TIMEOUT_MS; i++ ) {
-        uint8_t val = readRegister(SI1132_CHIP_STAT_REG);
+        uint8_t val = 0;
+        readRegister(SI1132_CHIP_STAT_REG, val);
         if (val == 0b00000001) {
             // chip is asleep
             return true;
@@ -178,7 +182,11 @@ bool Si1132Sensor::waitUntilSleep(void) {
 
 uint8_t Si1132Sensor::readResponseRegister(void)
 {
-    return readRegister(SI1132_RESPONSE_REG);
+    uint8_t register_value = 0;
+    if (!readRegister(SI1132_RESPONSE_REG, register_value)) {
+        return 0xFF;
+    }
+    return register_value;
 }
 
 bool Si1132Sensor::sendCommand(uint8_t cmd_value)
@@ -216,7 +224,8 @@ bool Si1132Sensor::setParameter(uint8_t param, uint8_t value)
     if (!success) {
         // read parameter
         sendCommand(SI1132_CMD_PARAM_QUERY|param);
-        uint8_t paramValue = readRegister(SI1132_PARAM_RD_REG);
+        uint8_t paramValue = 0;
+        readRegister(SI1132_PARAM_RD_REG, paramValue);
         PRINT_ERROR(F("ERROR sending param write command for Si1132 parameter = 0x"));
         PRINT_HEX_ERROR(param);
         PRINT_DEBUG(F(", final parameter value = "));
@@ -227,7 +236,8 @@ bool Si1132Sensor::setParameter(uint8_t param, uint8_t value)
         return 0;
     }
     // read results in PARAM_RD
-    uint8_t param_res = readRegister(SI1132_PARAM_RD_REG);
+    uint8_t param_res = 0;
+    readRegister(SI1132_PARAM_RD_REG, param_res);
     bool result = (param_res == value);
     if (!result) {
         PRINT_ERROR(F("ERROR setting Si1132 parameter 0x"));
@@ -254,7 +264,11 @@ uint8_t Si1132Sensor::readParameter(uint8_t param)
         return 0;
     }
     // read results in PARAM_RD
-    return readRegister(SI1132_PARAM_RD_REG);
+    uint8_t register_value = 0;
+    if (!readRegister(SI1132_PARAM_RD_REG, register_value)) {
+        return 0;
+    }
+    return register_value;
 }
 
 const uint8_t* Si1132Sensor::getCurrentMeasurementBuffer(void)

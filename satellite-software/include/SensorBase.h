@@ -27,10 +27,11 @@ protected:
     // multiple i2c addresses. 
     bool writeData(uint8_t deviceAddress, uint8_t data, bool sendStop = true);
     bool writeData(uint8_t deviceAddress, const uint8_t* data, size_t length, bool sendStop = true, bool acceptNACKAtEnd = false);
-    bool writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value);
+    bool writeRegister(uint8_t deviceAddress, uint8_t address, uint8_t value);
     bool readData(uint8_t deviceAddress, uint8_t* data, uint8_t length, bool sendStop = true );
-    int readRegister(uint8_t slaveAddress, uint8_t address);
-    bool readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length);
+    bool readRegister(uint8_t deviceAddress, uint8_t address, uint8_t& register_value);
+    bool readRegisters(uint8_t deviceAddress, uint8_t address, uint8_t* data, size_t length);
+    bool updateRegister(uint8_t deviceAddress, uint8_t address, uint8_t update_mask, uint8_t value);
 
     void setIsFound(bool isFound)               { _isFound = isFound; }
 
@@ -53,10 +54,11 @@ public:
     //
     bool writeData(uint8_t data, bool sendStop = true)                              { return writeData(i2cDeviceAddress(), data, sendStop); }
     bool writeData(const uint8_t* data, size_t length, bool sendStop = true )       { return writeData(i2cDeviceAddress(), data, length, sendStop); }
-    bool writeRegister(uint8_t address, uint8_t value)                   { return writeRegister(i2cDeviceAddress(), address, value); }
-    bool readData(uint8_t* data, uint8_t length, bool sendStop = true )      { return readData(i2cDeviceAddress(), data, length, sendStop); }
-    int readRegister(uint8_t address)                                    { return readRegister(i2cDeviceAddress(), address); }                          
-    bool readRegisters(uint8_t address, uint8_t* data, size_t length)    { return readRegisters(i2cDeviceAddress(), address, data, length); }
+    bool writeRegister(uint8_t address, uint8_t value)                              { return writeRegister(i2cDeviceAddress(), address, value); }
+    bool readData(uint8_t* data, uint8_t length, bool sendStop = true )             { return readData(i2cDeviceAddress(), data, length, sendStop); }
+    bool readRegister(uint8_t address, uint8_t& register_value)                     { return readRegister(i2cDeviceAddress(), address, register_value); }                          
+    bool readRegisters(uint8_t address, uint8_t* data, size_t length)               { return readRegisters(i2cDeviceAddress(), address, data, length); }
+    bool updateRegister(uint8_t address, uint8_t preserve_mask, uint8_t value)      { return updateRegister(i2cDeviceAddress(), address, preserve_mask, value); }
 };
 
 

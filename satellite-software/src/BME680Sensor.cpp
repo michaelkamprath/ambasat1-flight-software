@@ -1,0 +1,427 @@
+#include "BME680Sensor.h"
+#include "Logging.h"
+#include "Utilities.h"
+
+#define BME680_CHIP_ID_REG     0xD0
+#define BME680_RESET_REG       0xE0
+#define BME680_STATUS_REG      0x1D
+
+#define BME680_idac_heat_0_REG      0x50
+#define BME680_res_heat_0_REG       0x5A
+#define BME680_gas_wait_0_REG       0x64
+
+#define BME680_ctrl_gas_1_REG       0x71
+#define BME680_ctrl_hum_REG         0x72
+#define BME680_ctrl_meas_REG        0x74
+#define BME680_config_REG           0x75
+
+#define BME680_par_g1_REG           0xED
+#define BME680_par_g2_LSB_REG       0xEB
+#define BME680_par_g2_MSB_REG       0xEC
+#define BME680_par_g3_REG           0xEE
+#define BME680_res_heat_range_REG   0x02
+#define BME680_res_heat_range_MASK  0b00110000
+#define BME680_res_heat_range_SHIFT 4
+#define BME680_res_heat_val_REG     0x00
+
+#define BME680_par_t1_LSB_REG       0xE9
+#define BME680_par_t1_MSB_REG       0xEA
+#define BME680_par_t2_LSB_REG       0x8A
+#define BME680_par_t2_MSB_REG       0x8B
+#define BME680_par_t3_REG           0x8C
+
+#define BM680_par_p1_LSB_REG        0x8E
+#define BM680_par_p1_MSB_REG        0x8F
+
+#define BME680_range_switching_error_REG        0x04
+
+BME680Sensor::BME680Sensor(PersistedConfiguration& config)
+    :   SensorBase(config),
+        _sensorConfigured(false),
+        _measurementCompletionMillis(0)
+{
+    if (!begin())
+    {
+        PRINTLN_ERROR(F("ERROR: unable to initialize the BME680"));
+        setIsFound(false);
+    } else {
+        setIsFound(true);
+    }
+}
+
+BME680Sensor::~BME680Sensor()
+{
+
+}
+
+bool BME680Sensor::begin(void)
+{
+    uint8_t chip_id = 0;
+    if (!readRegister(BME680_CHIP_ID_REG, chip_id)) {
+
+        return false;
+    }
+    PRINT_INFO(F("Found BME680 sensor with chip ID = 0x"));
+    PRINT_HEX_INFO(chip_id);
+    PRINT_INFO(F("\n"));
+    return true;
+}
+
+void BME680Sensor::reset(void)
+{
+    if (!writeRegister(BME680_RESET_REG, 0xB6)) {
+        PRINTLN_ERROR(F("ERROR unable to reset BME680"));
+        return;
+    }
+    delay(10);
+    PRINTLN_DEBUG(F("BME680 has been reset"));
+}
+
+void BME680Sensor::setup(void)
+{
+    PRINTLN_DEBUG(F("Configuring BME680 sensor."));
+
+    // Select oversampling for T, P and H
+    updateRegister(BME680_ctrl_hum_REG, 0b00000111, 0x02); // 2x humidity OS
+    updateRegister(BME680_ctrl_meas_REG, 0b11100000|0b00011100, 0x80 | 0x0C ); // 8x temp OS, 4x pressure OS
+
+    // Select IIR filter for temperature sensor
+    updateRegister(BME680_config_REG, 0b00011100, 0x08); // IIR filter coefficient 3
+
+    // Define heater-on time
+    writeRegister(BME680_gas_wait_0_REG, calculateHeaterDuration(150)); // 150 ms heat up
+
+    // Enable gas coversion 
+    // TODO read ambient temperature from sensor
+    uint8_t res_heat_x;
+    if (!calculateTemperatureTargetResistance(320, 25, res_heat_x)) {  // target 300 degrees
+        PRINTLN_ERROR(F("ERROR calculating BME680 res_reat_x"));
+        return;
+    }
+    PRINT_DEBUG(F("    calculated res_heat_x = 0x"));
+    PRINT_HEX_DEBUG(res_heat_x);
+    PRINT_DEBUG(F("\n"));
+    writeRegister(BME680_res_heat_0_REG, res_heat_x);
+
+    // Select index of heater set-point and turn on gas
+    updateRegister(BME680_ctrl_gas_1_REG, 0b00001111 | 0b00010000, 0x00 | 0x10 ); // index 0 & on gas heater
+
+   _sensorConfigured = true;
+}
+
+uint8_t BME680Sensor::calculateHeaterDuration(uint16_t dur)
+{
+	uint8_t factor = 0;
+	uint8_t durval;
+
+	if (dur >= 0xfc0) {
+		durval = 0xff; /* Max duration*/
+	} else {
+		while (dur > 0x3F) {
+			dur = dur / 4;
+			factor += 1;
+		}
+		durval = (uint8_t) (dur + (factor * 64));
+	}
+
+	return durval;
+}
+
+bool BME680Sensor::calculateTemperatureTargetResistance(int16_t target_temp, int16_t amb_temp, uint8_t& out_res_heat_x )
+{
+    // first get calibration values from registers
+    int32_t par_g1, par_g2, par_g3, res_heat_range;
+    int8_t res_heat_val;
+    uint8_t reg_value;
+
+    if (!readRegister(BME680_par_g1_REG, reg_value)) {
+        return false;
+    }
+    par_g1 = reg_value;
+
+    if (!readRegister(BME680_par_g2_LSB_REG, reg_value)) {
+        return false;
+    }
+    par_g2 = reg_value;
+    readRegister(BME680_par_g2_MSB_REG, reg_value);
+    par_g2 += (uint16_t)reg_value*256;
+
+    readRegister(BME680_par_g3_REG, reg_value);
+    par_g3 = reg_value;
+
+    readRegister(BME680_res_heat_range_REG, reg_value);
+    res_heat_range = (reg_value&BME680_res_heat_range_MASK) >> BME680_res_heat_range_SHIFT;
+
+    readRegister(BME680_res_heat_val_REG, reg_value);
+    res_heat_val = (int8_t)reg_value;
+
+    // calculate value using interger math
+    int32_t var1 = (((int32_t)amb_temp * par_g3) / 10) << 8;
+    int32_t var2 = (par_g1 + 784) * (((((par_g2 + 154009) * (int32_t)target_temp * 5) / 100) + 3276800) / 10);
+    int32_t var3 = var1 + (var2 >> 1);
+    int32_t var4 = (var3 / (res_heat_range + 4));
+    int32_t var5 = (131 * res_heat_val) + 65536;
+    int32_t res_heat_x100 = (int32_t)(((var4 / var5) - 250) * 34);
+
+    out_res_heat_x = (uint8_t)((res_heat_x100 + 50) / 100);
+
+    return true;
+}
+
+bool BME680Sensor::isActive(void) const
+{
+    return SensorBase::isActive() && _sensorConfigured;
+}
+
+void BME680Sensor::startMeasurementProcess(void)
+{
+    if (isActive()) {
+        // Trigger forced mode measurement
+        if (!updateRegister(BME680_ctrl_meas_REG, 0b00000011, 0x01)) { // forced mode
+            PRINTLN_ERROR(F("ERROR setting BME660 forced mode"));
+            return;
+        }
+    }
+}
+
+
+
+const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
+{
+    // if (_measurementCompletionMillis == 0) {
+    //     // no measurement was started
+    //     return nullptr;
+    // }
+    // wait until measurement bit is cleated
+
+    uint8_t reg_value;
+    if (!readRegister(BME680_STATUS_REG, reg_value)) {
+        PRINTLN_ERROR(F("ERROR reading BME680 status"));
+        return nullptr;
+    }
+
+    bool isDone = ((reg_value&0b0010000) == 0);
+    if (!isDone) {
+        PRINT_DEBUG(F("    waiting for BMR680 to complete measurement"));
+        while (!isDone) {
+            PRINT_DEBUG(F("."));
+            if (!readRegister(BME680_STATUS_REG, reg_value)) {
+                PRINTLN_ERROR(F("ERROR reading BME680 status"));
+                return nullptr;
+            }
+            isDone = ((reg_value&0b0010000) == 0);
+            delay(1);
+        }
+        PRINTLN_DEBUG(F("\n    BME680 measurement is done.")); 
+    }
+
+    // get temp, pressure, and humidity ADC values. The buffer map is
+    //  buffer idx  | register | description
+    //  ------------+----------+----------------------
+    //            0 |   0x1F   | press_adc MSB
+    //            1 |   0x20   | press_adc LSB
+    //            2 |   0x21   | press_adc XLSB <7:4>
+    //            3 |   0x22   | temp_adc MSB
+    //            4 |   0x23   | temp_adc LSB
+    //            5 |   0x24   | temp_adc XLSB <7:4>
+    //            6 |   0x25   | hum_adc MSB
+    //            7 |   0x26   | hum_adc LSB
+    //            8 |   0x2A   | gas_r<9:2>
+    //            9 |   0x2B   | gas_r<1:0>, gas_valid_r, heat_stab_r, gas_range_r
+    //
+
+    uint8_t adc_buffer[10];
+    memset(adc_buffer, 0x00, 8);
+    readRegisters(0x1F,adc_buffer, 8);
+    readRegisters(0x2A,&adc_buffer[8], 2);
+
+    PRINT_DEBUG(F("    ADC = "));
+    print_buffer(adc_buffer, 8);
+
+    int32_t t_fine;
+    int32_t temp_comp = calibratedTemperatureReading(adc_buffer[3], adc_buffer[4], adc_buffer[5], t_fine);
+    int32_t press_comp = calibratedPressureReading(adc_buffer[0], adc_buffer[1], adc_buffer[2], t_fine);
+    int32_t hum_comp = calibratedHumidityReading(adc_buffer[6], adc_buffer[7], temp_comp);
+    int32_t gas_res = calibratedGasResistance(adc_buffer[8], adc_buffer[9]);
+
+    PRINT_DEBUG(F("    calibrate temp = "));
+    PRINT_DEBUG( temp_comp );
+    PRINT_DEBUG(F(", normalize temp = "));
+    PRINT_DEBUG( (((float)temp_comp*9.0/5.0/100.0) + 32.0) );
+    PRINT_DEBUG(F(" °F, pressure = "));    
+    PRINT_DEBUG(press_comp);
+    PRINT_DEBUG(F(", humidity = "));    
+    PRINT_DEBUG(hum_comp);
+    PRINT_DEBUG(F(", gas resistance = "));    
+    PRINT_DEBUG(gas_res);
+    PRINT_DEBUG(F("\n")); 
+
+    //
+    // Transmit buffer format:
+    //
+    //      int16_t    - temperate in celsius*100
+    //      int32_t    - pressure in Pa
+    //      int16_t    - humidity in %*100
+    //      int32_t    - gas resistance
+    //
+    //  Total buffer size = 12
+
+    memset(_buffer, 0, BME680_RESULTS_BUFFER_SIZE);
+    hton_int16(temp_comp, &_buffer[0]);
+    hton_int32(press_comp, &_buffer[2]);
+    hton_int16(hum_comp/10, &_buffer[6]);
+    hton_int32(gas_res, &_buffer[8]);
+
+    return _buffer;
+}
+
+int32_t BME680Sensor::calibratedTemperatureReading(uint8_t temp_adc_msb, uint8_t temp_adc_lsb, uint8_t temp_adc_xlsb, int32_t& t_fine)
+{
+    // calculate temp_adc;
+    int32_t temp_adc = ((temp_adc_xlsb&0b11110000)/16) + ((int32_t)temp_adc_lsb*16) + ((int32_t)temp_adc_msb*4096);
+    
+    // first get calibration values from registers
+    int32_t par_t1, par_t2, par_t3;
+    uint8_t reg_value;
+
+    if (!readRegister(BME680_par_t1_LSB_REG, reg_value)) {
+        return 0xFFFFFFFF;
+    }
+    par_t1 = reg_value;
+    if (!readRegister(BME680_par_t1_MSB_REG, reg_value)) {
+        return 0xFFFFFFFF;
+    }
+    par_t1 += (int32_t)reg_value*256;
+    if (!readRegister(BME680_par_t2_LSB_REG, reg_value)) {
+        return 0xFFFFFFFF;
+    }
+    par_t2 = reg_value;
+    if (!readRegister(BME680_par_t2_MSB_REG, reg_value)) {
+        return 0xFFFFFFFF;
+    }
+    par_t2 += (int32_t)reg_value*256;
+     if (!readRegister(BME680_par_t3_REG, reg_value)) {
+        return 0xFFFFFFFF;
+    }
+    par_t3 = reg_value;   
+
+    // calculate
+    int64_t var1 = ((int32_t)temp_adc >> 3) - ((int32_t)par_t1 << 1);
+    int64_t var2 = (var1 * (int32_t)par_t2) >> 11;
+    int64_t var3 = ((((var1 >> 1) * (var1 >> 1)) >> 12) * ((int32_t)par_t3 << 4)) >> 14;
+    t_fine = var2 + var3;
+    int32_t temp_comp = ((t_fine * 5) + 128) >> 8;
+
+    return temp_comp;
+}
+
+int32_t BME680Sensor::calibratedPressureReading(uint8_t press_adc_msb, uint8_t press_adc_lsb, uint8_t press_adc_xlsb, int32_t t_fine)
+{
+    // calculate press_adc;
+    int32_t press_adc = ((press_adc_xlsb&0b11110000)/16) + ((int32_t)press_adc_lsb*16) + ((int32_t)press_adc_msb*4096);
+
+    // first get calibration values from registers
+    int32_t par_p1, par_p2, par_p3, par_p4, par_p5, par_p6, par_p7, par_p8, par_p9, par_p10;
+    uint8_t buffer[19];
+
+    if (!readRegisters(BM680_par_p1_LSB_REG, buffer, 19)) {
+        return 0xFFFFFFFF;
+    }
+    par_p1 = buffer[0] + (int32_t)buffer[1]*256;
+    par_p2 = buffer[2] + (int32_t)buffer[3]*256;
+    par_p3 = buffer[4];
+    par_p4 = buffer[6] + (int32_t)buffer[7]*256;
+    par_p6 = buffer[9];
+    par_p7 = buffer[8];
+    par_p8 = buffer[14] + (int32_t)buffer[15]*256;
+    par_p9 = buffer[15] + (int32_t)buffer[17]*256;
+    par_p9 = buffer[18];
+
+    // calculate
+    int32_t var1 = ((int32_t)t_fine >> 1) - 64000;
+    int32_t var2 = ((((var1 >> 2) * (var1 >> 2)) >> 11) * (int32_t)par_p6) >> 2;
+    var2 = var2 + ((var1 * (int32_t)par_p5) << 1);
+    var2 = (var2 >> 2) + ((int32_t)par_p4 << 16);
+    var1 = (((((var1 >> 2) * (var1 >> 2)) >> 13) * ((int32_t)par_p3 << 5)) >> 3) + (((int32_t)par_p2 * var1) >> 1);
+    var1 = var1 >> 18;
+    var1 = ((32768 + var1) * (int32_t)par_p1) >> 15;
+    int32_t press_comp = 1048576 - press_adc;
+    press_comp = (uint32_t)((press_comp - (var2 >> 12)) * ((uint32_t)3125));
+    if (press_comp >= ((int32_t)1 << 30)) {
+        press_comp = ((press_comp / (uint32_t)var1) << 1); 
+    } else {
+        press_comp = ((press_comp << 1) / (uint32_t)var1); 
+    }
+    var1 = ((int32_t)par_p9 * (int32_t)(((press_comp >> 3) * (press_comp >> 3)) >> 13)) >> 12;
+    var2 = ((int32_t)(press_comp >> 2) * (int32_t)par_p8) >> 13;
+    int32_t var3 = ((int32_t)(press_comp >> 8) * (int32_t)(press_comp >> 8) * (int32_t)(press_comp >> 8) * (int32_t)par_p10) >> 17; 
+    
+    press_comp = (int32_t)(press_comp) + ((var1 + var2 + var3 + ((int32_t)par_p7 << 7)) >> 4);
+
+    return press_comp;
+}
+
+int32_t BME680Sensor::calibratedHumidityReading(uint8_t hum_adc_msb, uint8_t hum_adc_lsb, int32_t temp_comp)
+{
+    // calculate hum_adc;
+    int32_t hum_adc = hum_adc_lsb + (int32_t)hum_adc_msb*256;
+
+
+    // first get calibration values from registers
+    int32_t par_h1, par_h2, par_h3, par_h4, par_h5, par_h6, par_h7;
+    uint8_t buffer[8];
+
+    if (!readRegisters(0xE1, buffer, 8)) {
+        return 0xFFFFFFFF;
+    }
+    // the data sheet has an error in it. the LSB are bite <3:0> at register 0xE2
+    par_h1 = (buffer[1]&0x0F) + (int32_t)buffer[2]*16;
+    par_h2 = ((buffer[1]&0xF0) >> 4) + (int32_t)buffer[0]*16;
+    par_h3 = buffer[3];
+    par_h4 = buffer[4];
+    par_h5 = buffer[5];
+    par_h6 = buffer[6];
+    par_h7 = buffer[7];
+
+    // calculate
+    int32_t temp_scaled = temp_comp;
+    int32_t var1 = (int32_t)hum_adc - (int32_t)((int32_t)par_h1 << 4) - (((temp_comp * (int32_t)par_h3) / ((int32_t)100)) >> 1);
+    int32_t var2 = ((int32_t)par_h2 * (((temp_scaled * (int32_t)par_h4) / ((int32_t)100)) + (((temp_scaled * ((temp_scaled * (int32_t)par_h5) / ((int32_t)100))) >> 6) / ((int32_t)100)) + ((int32_t)(1 << 14)))) >> 10;
+    int32_t var3 = var1 * var2;
+    int32_t var4 = (((int32_t)par_h6 << 7) + ((temp_scaled * (int32_t)par_h7) / ((int32_t)100))) >> 4;
+    int32_t var5 = ((var3 >> 14) * (var3 >> 14)) >> 10;
+    int32_t var6 = (var4 * var5) >> 1;
+    int32_t hum_comp = (var3 + var6) >> 12;
+    hum_comp = (((var3 + var6) >> 10) * ((int32_t) 1000)) >> 12;
+
+    return hum_comp;
+}
+
+int32_t BME680Sensor::calibratedGasResistance(uint8_t gas_adc_msb, uint8_t gas_adc_lsb)
+{
+    static const uint32_t const_array1_int[16] = { UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2147483647),
+		UINT32_C(2147483647), UINT32_C(2126008810), UINT32_C(2147483647), UINT32_C(2130303777),
+		UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2143188679), UINT32_C(2136746228),
+		UINT32_C(2147483647), UINT32_C(2126008810), UINT32_C(2147483647), UINT32_C(2147483647) };
+
+    static const uint32_t const_array2_int[16] = { UINT32_C(4096000000), UINT32_C(2048000000), UINT32_C(1024000000), UINT32_C(512000000),
+		UINT32_C(255744255), UINT32_C(127110228), UINT32_C(64000000), UINT32_C(32258064), UINT32_C(16016016),
+		UINT32_C(8000000), UINT32_C(4000000), UINT32_C(2000000), UINT32_C(1000000), UINT32_C(500000),
+		UINT32_C(250000), UINT32_C(125000) };
+
+    int16_t gas_adc = (int16_t)(gas_adc_lsb/64) + (int16_t)gas_adc_msb*4;
+    uint8_t gas_range = gas_adc_lsb&0b00001111;
+
+    uint8_t range_switching_error;
+    if (!readRegister(BME680_range_switching_error_REG, range_switching_error)) {
+        return 0xFFFFFFFF;
+    }
+
+    // calculate
+    int64_t var1 = (int64_t)(((1340 + (5 * (int64_t)range_switching_error)) * ((int64_t)const_array1_int[gas_range])) >> 16);
+    int64_t var2 = (int64_t)(gas_adc << 15) - (int64_t)((int64_t)1 << 24) + var1;
+
+    int32_t gas_res = (int32_t)(( ((int64_t)(const_array2_int[gas_range] * (int64_t)var1) >> 9) + (var2 >> 1)) / var2);
+
+    return gas_res;
+}

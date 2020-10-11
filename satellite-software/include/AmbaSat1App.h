@@ -18,6 +18,8 @@ private:
     SHT30Sensor     _missionSensor;
 #elif AMBASAT_MISSION_SENSOR == SENSOR_STS21
     STS21Sensor     _missionSensor;
+#elif AMBASAT_MISSION_SENSOR == SENSOR_BME680
+    BME680Sensor    _missionSensor;
 #endif  // AMBASAT_MISSION_SENSOR
 
     uint8_t _buffer[7];

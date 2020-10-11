@@ -61,6 +61,8 @@ LSM9DS1Sensor::~LSM9DS1Sensor()
 
 bool LSM9DS1Sensor::begin(void)
 {
+    uint8_t register_value;
+
     // reset
     if (!writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG8, 0x05)) {
         return false;
@@ -69,12 +71,12 @@ bool LSM9DS1Sensor::begin(void)
 
     delay(10);
 
-    if (readRegister(LSM9DS1_ADDRESS, LSM9DS1_WHO_AM_I) != 0x68) {
+    if (!readRegister(LSM9DS1_ADDRESS, LSM9DS1_WHO_AM_I, register_value) || (register_value != 0x68)) {
         end();
         return false;
     }
 
-    if (readRegister(LSM9DS1_ADDRESS_M, LSM9DS1_WHO_AM_I) != 0x3d) {
+    if (!readRegister(LSM9DS1_ADDRESS_M, LSM9DS1_WHO_AM_I, register_value) || (register_value != 0x3d)) {
         end();
         return false;
     }
@@ -171,8 +173,10 @@ void LSM9DS1Sensor::setAccelFS(AccelerationSensitivitySetting config)
         default:
             return;
             break;
-    }    
-	uint8_t setting = ((readRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG6_XL) & 0xE7) | range);
+    }
+    uint8_t register_value = 0;
+    readRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG6_XL, register_value);
+	uint8_t setting = ((register_value & 0xE7) | range);
 	writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG6_XL,setting) ;
 }
 
@@ -200,7 +204,9 @@ void LSM9DS1Sensor::setGyroFS(GyroSensitivitySetting config)
             return;
             break;
     }
-    uint8_t setting = ((readRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG1_G) & 0xE7) | range );
+    uint8_t register_value = 0;
+    readRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG1_G, register_value);
+    uint8_t setting = ((register_value & 0xE7) | range );
     writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG1_G,setting) ;
 }
 

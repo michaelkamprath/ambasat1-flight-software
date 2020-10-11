@@ -141,28 +141,24 @@ void AmbaSat1App::setup()
 void AmbaSat1App::loop() 
 {
     digitalWrite(LED_PIN, HIGH);
+#if AMBASAT_MISSION_SENSOR == SENSOR_BME680
+    if (_missionSensor.isActive()) {
+        _missionSensor.startMeasurementProcess();
+    }
+#endif
     PRINTLN_INFO(F("Transmitting Satellite Status."));
     sendSensorPayload(*this);
-    while(!_sleeping) {
-        os_runloop_once();
-    }
     _sleeping = false;
 
     if (_lsm9DS1Sensor.isActive()) {
         PRINTLN_INFO(F("Transmitting LSM9DS1 sensor."));
         sendSensorPayload(_lsm9DS1Sensor);
-        while(!_sleeping) {
-            os_runloop_once();
-        }
         _sleeping = false;
     }
 
     if (_missionSensor.isActive()) {
-        PRINTLN_INFO(F("Transmitting Mission sensor."));
+        PRINTLN_INFO(F("Transmitting mission sensor"));
         sendSensorPayload(_missionSensor);
-        while(!_sleeping) {
-            os_runloop_once();
-        }
         _sleeping = false;
     }
     digitalWrite(LED_PIN, LOW);
@@ -173,6 +169,11 @@ void AmbaSat1App::loop()
     // number of time we write to EEPROM.
     //
     _config.setUplinkFrameCount(LMIC.seqnoUp);
+
+    // flush serial before going to sleep
+    Serial.flush();
+
+    // sleep device for designated sleep cycles
     for (int i=0; i < SLEEPCYCLES; i++)
     {
         LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);    //sleep 8 seconds * sleepcycles
@@ -210,6 +211,9 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
     }
     PRINT_INFO(F(" }\n"));
 #endif
+    while(!_sleeping) {
+        os_runloop_once();
+    }
 }
 
 // initial job

@@ -5,6 +5,7 @@
 // Configuration ENUMs
 //
 
+// LSM9DS1 Config
 typedef enum {
     ACCELERATION_SENSITIVITY_OFF = 0x00,
     ACCELERATION_SENSITIVITY_2G = 0x01,

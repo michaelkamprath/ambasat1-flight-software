@@ -102,7 +102,7 @@ bool SensorBase::readData(uint8_t deviceAddress, uint8_t* data, uint8_t length, 
     return true;
 }
 
-int SensorBase::readRegister(uint8_t deviceAddress, uint8_t address)
+bool SensorBase::readRegister(uint8_t deviceAddress, uint8_t address, uint8_t& register_value)
 {
     if (deviceAddress == 0xFF) {
         // this is not a i2c sensor
@@ -114,7 +114,7 @@ int SensorBase::readRegister(uint8_t deviceAddress, uint8_t address)
         PRINT_ERROR(F("ERROR ending transmission device address = 0x"));
         PRINT_HEX_ERROR(deviceAddress);
         PRINT_ERROR(F(" (readRegister)\n"));
-       return -1;
+       return false;
     }
 
     if (Wire.requestFrom(deviceAddress, (uint8_t)1) != 1) {
@@ -123,7 +123,7 @@ int SensorBase::readRegister(uint8_t deviceAddress, uint8_t address)
         PRINT_DEBUG(F(" at address 0x"));
         PRINT_HEX_DEBUG(address);
         PRINT_ERROR(F(" (readRegister)\n"));
-        return -1;
+        return false;
     }
 
     int value = Wire.read();
@@ -132,10 +132,11 @@ int SensorBase::readRegister(uint8_t deviceAddress, uint8_t address)
         PRINT_ERROR(F("ERROR ending transmission #1 - device address = 0x"));
         PRINT_HEX_ERROR(deviceAddress);
         PRINT_ERROR(F(" (readRegister)\n"));
-        return -1;
+        return false;
     }
 
-    return value;
+    register_value = value;
+    return true;
 }
 
 bool SensorBase::readRegisters(uint8_t deviceAddress, uint8_t address, uint8_t* data, size_t length)
@@ -196,4 +197,13 @@ bool SensorBase::writeRegister(uint8_t deviceAddress, uint8_t address, uint8_t v
     }
 
     return true;
+}
+
+bool SensorBase::updateRegister(uint8_t deviceAddress, uint8_t address, uint8_t update_mask, uint8_t value)
+{   
+    uint8_t curValue;
+    if (!readRegister(deviceAddress, address, curValue)) {
+        return false;
+    }
+    return writeRegister(deviceAddress, address, ((curValue&(~update_mask)) | (value&update_mask)) );
 }

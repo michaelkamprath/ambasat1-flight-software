@@ -202,6 +202,27 @@ function DecodeSTS21Sensor(bytes) {
 	};
 }
 
+function DecodeBME680Sensor(bytes) {
+	// BME680 Sensor
+	if (bytes.length !== 12) {
+		return {
+			error: "payload length is not correct size",
+			port: port,
+			length: bytes.length 
+		};
+	}
+
+	var tempReading = convertTwoBytesToSignedInt(bytes[0], bytes[1]);
+	var pressureReading = convertFourBytesToUnsignedInt(bytes[2], bytes[3], bytes[4], bytes[5]);
+	var humidityReading = convertTwoBytesToSignedInt(bytes[6], bytes[7]);
+	var resistanceReading = convertFourBytesToUnsignedInt(bytes[8], bytes[9], bytes[10], bytes[11]);
+	return {
+		temperature: tempReading/100.0,
+		pressure: pressureReading/100.0,
+		humidity: humidityReading/100.0,
+		gas_resistance: resistanceReading
+	};
+}
 function DecodeSI1132Sensor(bytes) {
 	// Si1132 sensor
 	if (bytes.length !== 6) {
@@ -228,6 +249,8 @@ function Decoder(bytes, port) {
 		return DecodeSHT30Sensor(bytes);
 	} else if (port === 4 ) {
 		return DecodeSTS21Sensor(bytes);
+	} else if (port === 5 ) {
+		return DecodeBME680Sensor(bytes);
 	} else if (port === 8 ) {
 		return DecodeSI1132Sensor(bytes);
 	} else if (port === 0) {
