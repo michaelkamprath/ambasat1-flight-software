@@ -1,6 +1,7 @@
 #include "BME680Sensor.h"
 #include "Logging.h"
 #include "Utilities.h"
+#include "PersistedConfiguration.h"
 
 #define BME680_CHIP_ID_REG     0xD0
 #define BME680_RESET_REG       0xE0
@@ -35,6 +36,15 @@
 
 #define BME680_range_switching_error_REG        0x04
 
+#define BME680_HUMIDITY_OS_MASK         0x07
+#define BME680_HUMIDITY_OS_SHIFT        0
+#define BME680_TEMPERATURE_OS_MASK      0xE0
+#define BME680_TEMPERATURE_OS_SHIFT     5
+#define BME680_PRESSURE_OS_MASK         0x1C
+#define BME680_PRESSURE_OS_SHIFT        2
+#define BME680_IIR_FILTER_COEF_MASK     0x1C
+#define BME680_IIR_FILTER_COEF_SHIFT    2
+
 BME680Sensor::BME680Sensor(PersistedConfiguration& config)
     :   SensorBase(config),
         _sensorConfigured(false),
@@ -61,6 +71,10 @@ bool BME680Sensor::begin(void)
 
         return false;
     }
+    if (chip_id != 0x61) {
+        PRINT_ERROR(F("ERROR Found BME680 sensor with wrong chip ID = 0x"));
+        return false;
+    }
     PRINT_INFO(F("Found BME680 sensor with chip ID = 0x"));
     PRINT_HEX_INFO(chip_id);
     PRINT_INFO(F("\n"));
@@ -82,20 +96,37 @@ void BME680Sensor::setup(void)
     PRINTLN_DEBUG(F("Configuring BME680 sensor."));
 
     // Select oversampling for T, P and H
-    updateRegister(BME680_ctrl_hum_REG, 0b00000111, 0x02); // 2x humidity OS
-    updateRegister(BME680_ctrl_meas_REG, 0b11100000|0b00011100, 0x80 | 0x0C ); // 8x temp OS, 4x pressure OS
+    uint8_t tempOS = ((uint8_t)_config.getTemperatureOversampling()) << BME680_TEMPERATURE_OS_SHIFT;
+    uint8_t humidOS = ((uint8_t)_config.getHumidityOversampling()) << BME680_HUMIDITY_OS_SHIFT;
+    uint8_t pressureOS = ((uint8_t)_config.getPressureOversampling()) << BME680_PRESSURE_OS_SHIFT;
+  
+    if (!updateRegister(BME680_ctrl_hum_REG, BME680_HUMIDITY_OS_MASK, humidOS)) {
+        PRINTLN_DEBUG(F("ERROR could not set humid OS"));
+        return;
+    }
+    if (!updateRegister(BME680_ctrl_meas_REG, BME680_TEMPERATURE_OS_MASK|BME680_PRESSURE_OS_MASK, tempOS|pressureOS )) {
+        PRINTLN_DEBUG(F("ERROR could not set temp or press OS"));
+        return;
+    }
 
     // Select IIR filter for temperature sensor
-    updateRegister(BME680_config_REG, 0b00011100, 0x08); // IIR filter coefficient 3
+    uint8_t iirCoef = (uint8_t)_config.getIIRFileterCoef() << 2;
+    if (!updateRegister(BME680_config_REG, BME680_IIR_FILTER_COEF_MASK, iirCoef)) {
+        PRINTLN_DEBUG(F("ERROR could not set IIR coef"));
+        return;
+    }
 
     // Define heater-on time
-    writeRegister(BME680_gas_wait_0_REG, calculateHeaterDuration(150)); // 150 ms heat up
+    if (!writeRegister(BME680_gas_wait_0_REG, calculateHeaterDuration(150))) {
+        PRINTLN_DEBUG(F("ERROR could not set heater duration"));
+        return;    
+    }
 
     // Enable gas coversion 
     // TODO read ambient temperature from sensor
     uint8_t res_heat_x;
     if (!calculateTemperatureTargetResistance(320, 25, res_heat_x)) {  // target 300 degrees
-        PRINTLN_ERROR(F("ERROR calculating BME680 res_reat_x"));
+        PRINTLN_DEBUG(F("ERROR calculating BME680 res_reat_x"));
         return;
     }
     PRINT_DEBUG(F("    calculated res_heat_x = 0x"));
@@ -106,7 +137,7 @@ void BME680Sensor::setup(void)
     // Select index of heater set-point and turn on gas
     updateRegister(BME680_ctrl_gas_1_REG, 0b00001111 | 0b00010000, 0x00 | 0x10 ); // index 0 & on gas heater
 
-   _sensorConfigured = true;
+    _sensorConfigured = true;
 }
 
 uint8_t BME680Sensor::calculateHeaterDuration(uint16_t dur)
@@ -176,23 +207,34 @@ bool BME680Sensor::isActive(void) const
 void BME680Sensor::startMeasurementProcess(void)
 {
     if (isActive()) {
+        PRINT_DEBUG(F("    starting BME680 measurement process ..."));
         // Trigger forced mode measurement
         if (!updateRegister(BME680_ctrl_meas_REG, 0b00000011, 0x01)) { // forced mode
             PRINTLN_ERROR(F("ERROR setting BME660 forced mode"));
             return;
         }
+        PRINT_DEBUG(F(" Done!\n"));
     }
 }
 
-
+uint16_t BME680Sensor::calculateMeasurmentDuration(void) const
+{
+    // TODO calculate more rpecise measurement delay. 
+    return 300;
+}
 
 const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
 {
-    // if (_measurementCompletionMillis == 0) {
-    //     // no measurement was started
-    //     return nullptr;
-    // }
-    // wait until measurement bit is cleated
+    // normally the BME680 measurement process can be done asynchronously, allowing the MCU to do other
+    // things. But the AmbaSat-1 will brown out if both the BME680 heater and the RFM95 transmitter are
+    // active at the same time. This likely could be fixed with a capacitor or two. Or we can fix it in software
+    // by running the BME680 synchronously with everything else the AmbaSat-1 is doing. Software fix it is.
+    if (isActive()) {
+        startMeasurementProcess();
+    } else {
+        return nullptr;
+    }
+    delay(calculateMeasurmentDuration());
 
     uint8_t reg_value;
     if (!readRegister(BME680_STATUS_REG, reg_value)) {
@@ -237,7 +279,6 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
 
     PRINT_DEBUG(F("    ADC = "));
     print_buffer(adc_buffer, 8);
-
     int32_t t_fine;
     int32_t temp_comp = calibratedTemperatureReading(adc_buffer[3], adc_buffer[4], adc_buffer[5], t_fine);
     int32_t press_comp = calibratedPressureReading(adc_buffer[0], adc_buffer[1], adc_buffer[2], t_fine);
@@ -262,16 +303,16 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     //      int16_t    - temperate in celsius*100
     //      int32_t    - pressure in Pa
     //      int16_t    - humidity in %*100
-    //      int32_t    - gas resistance
+    //      int32_t    - gas resistance in ohms
     //
     //  Total buffer size = 12
+    //
 
     memset(_buffer, 0, BME680_RESULTS_BUFFER_SIZE);
     hton_int16(temp_comp, &_buffer[0]);
     hton_int32(press_comp, &_buffer[2]);
     hton_int16(hum_comp/10, &_buffer[6]);
     hton_int32(gas_res, &_buffer[8]);
-
     return _buffer;
 }
 

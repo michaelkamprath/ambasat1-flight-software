@@ -1,5 +1,6 @@
 #ifndef __PersistedConfiguration__
 #define __PersistedConfiguration__
+#include "AmbaSat1Config.h"
 
 //
 // Configuration ENUMs
@@ -29,6 +30,28 @@ typedef enum {
     MAGNETIC_SENSITIVITY_12GAUSS = 0x03,
     MAGNETIC_SENSITIVITY_16GAUSS = 0x04
 } MagneticSensitivitySetting;
+
+// BME680 Config
+
+typedef enum {
+    BME680_OVERSAMPLING_NONE = 0,
+    BME680_OVERSAMPLING_1x = 0b001,
+    BME680_OVERSAMPLING_2x = 0b010,
+    BME680_OVERSAMPLING_4x = 0b011,
+    BME680_OVERSAMPLING_8x = 0b100,
+    BME680_OVERSAMPLING_16x = 0b101
+} BME680SEnsorOversamplingSetting;
+
+typedef enum {
+    BME_FILTER_COEF_0   = 0,
+    BME_FILTER_COEF_1   = 0b001,
+    BME_FILTER_COEF_3   = 0b010,
+    BME_FILTER_COEF_7   = 0b011,
+    BME_FILTER_COEF_15  = 0b100,
+    BME_FILTER_COEF_31  = 0b101,
+    BME_FILTER_COEF_63  = 0b110,
+    BME_FILTER_COEF_127 = 0b111
+} BME680IIRFilterCoefSetting;
 
 //
 // Class
@@ -65,6 +88,10 @@ public:
     uint32_t getUplinkFrameCount(void) const      { return _uplinkFrameCount; }
      void setUplinkFrameCount(uint32_t frameCount, bool updateCRC = true);   
     
+    //
+    // LSM9DS1
+    //
+
     AccelerationSensitivitySetting getAcceleratonSensitivitySetting(void) const     { return _accelSensitivity; }
     void setAcceleratonSensitivitySetting(AccelerationSensitivitySetting seting, bool updateCRC = true);
     
@@ -74,6 +101,18 @@ public:
     MagneticSensitivitySetting getMagneticSensitivitySetting(void) const            { return _magneticSensitivity; }
     void setMagneticSensitivitySetting(MagneticSensitivitySetting setting, bool updateCRC = true);
 
+    //
+    // BME680
+    //
+#if AMBASAT_MISSION_SENSOR == SENSOR_BME680
+    BME680SEnsorOversamplingSetting getTemperatureOversampling(void) const          { return BME680_OVERSAMPLING_4x; }
+
+    BME680SEnsorOversamplingSetting getHumidityOversampling(void) const             { return BME680_OVERSAMPLING_4x; }
+
+    BME680SEnsorOversamplingSetting getPressureOversampling(void) const             { return BME680_OVERSAMPLING_4x; }
+
+    BME680IIRFilterCoefSetting getIIRFileterCoef(void) const                        { return BME_FILTER_COEF_3; }
+#endif
 };
 
 

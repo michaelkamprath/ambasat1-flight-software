@@ -24,11 +24,13 @@ private:
 
     uint8_t calculateHeaterDuration(uint16_t durationMillis);
     bool calculateTemperatureTargetResistance(int16_t target_temp, int16_t amb_temp, uint8_t& out_res_heat_x );
+    uint16_t calculateMeasurmentDuration(void) const;
+    
     int32_t calibratedTemperatureReading(uint8_t temp_adc_msb, uint8_t temp_adc_lsb, uint8_t temp_adc_xlsb, int32_t& t_fine);
     int32_t calibratedPressureReading(uint8_t press_adc_msb, uint8_t press_adc_lsb, uint8_t press_adc_xlsb, int32_t t_fine);
     int32_t calibratedHumidityReading(uint8_t hum_adc_msb, uint8_t hum_adc_lsb, int32_t temp_comp);
     int32_t calibratedGasResistance(uint8_t gas_adc_msb, uint8_t gas_adc_lsb);
-
+    
 protected:
     virtual uint8_t i2cAutoIncrementBit(void) const             { return 0; }
 

@@ -141,11 +141,7 @@ void AmbaSat1App::setup()
 void AmbaSat1App::loop() 
 {
     digitalWrite(LED_PIN, HIGH);
-#if AMBASAT_MISSION_SENSOR == SENSOR_BME680
-    if (_missionSensor.isActive()) {
-        _missionSensor.startMeasurementProcess();
-    }
-#endif
+
     PRINTLN_INFO(F("Transmitting Satellite Status."));
     sendSensorPayload(*this);
     _sleeping = false;
