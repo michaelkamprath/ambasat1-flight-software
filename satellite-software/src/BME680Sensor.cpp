@@ -123,17 +123,8 @@ void BME680Sensor::setup(void)
     }
 
     // Enable gas coversion 
-    // TODO read ambient temperature from sensor
-    uint8_t res_heat_x;
-    if (!calculateTemperatureTargetResistance(320, 25, res_heat_x)) {  // target 300 degrees
-        PRINTLN_DEBUG(F("ERROR calculating BME680 res_reat_x"));
-        return;
-    }
-    PRINT_DEBUG(F("    calculated res_heat_x = 0x"));
-    PRINT_HEX_DEBUG(res_heat_x);
-    PRINT_DEBUG(F("\n"));
-    writeRegister(BME680_res_heat_0_REG, res_heat_x);
-
+    updateTemperatureTargetResistance(320, 25);
+ 
     // Select index of heater set-point and turn on gas
     updateRegister(BME680_ctrl_gas_1_REG, 0b00001111 | 0b00010000, 0x00 | 0x10 ); // index 0 & on gas heater
 
@@ -158,6 +149,22 @@ uint8_t BME680Sensor::calculateHeaterDuration(uint16_t dur)
 	return durval;
 }
 
+bool BME680Sensor::updateTemperatureTargetResistance(int16_t target_temp, int16_t amb_temp)
+{
+    // TODO read ambient temperature from sensor
+    uint8_t res_heat_x;
+    if (!calculateTemperatureTargetResistance(target_temp, amb_temp, res_heat_x)) {  // target 300 degrees
+        PRINTLN_DEBUG(F("ERROR calculating BME680 res_reat_x"));
+        return false;
+    }
+
+    PRINT_DEBUG(F("    calculated res_heat_x = 0x"));
+    PRINT_HEX_DEBUG(res_heat_x);
+    PRINT_DEBUG(F("\n"));
+    writeRegister(BME680_res_heat_0_REG, res_heat_x);
+
+    return true;
+}
 bool BME680Sensor::calculateTemperatureTargetResistance(int16_t target_temp, int16_t amb_temp, uint8_t& out_res_heat_x )
 {
     // first get calibration values from registers
@@ -296,6 +303,9 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     PRINT_DEBUG(F(", gas resistance = "));    
     PRINT_DEBUG(gas_res);
     PRINT_DEBUG(F("\n")); 
+
+    // now that we have a current temperature, update the gas resitance sensor calibration
+    updateTemperatureTargetResistance(320, temp_comp/100);
 
     //
     // Transmit buffer format:
