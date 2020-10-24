@@ -45,6 +45,12 @@
 #define BME680_IIR_FILTER_COEF_MASK     0x1C
 #define BME680_IIR_FILTER_COEF_SHIFT    2
 
+#define BME680_nb_conv_MASK             0x0F
+#define BME680_run_gas_MASK             0x10
+#define BME680_run_gas_ON               0x10
+#define BME680_run_gas_OFF              0x00
+
+
 BME680Sensor::BME680Sensor(PersistedConfiguration& config)
     :   SensorBase(config),
         _sensorConfigured(false),
@@ -110,23 +116,23 @@ void BME680Sensor::setup(void)
     }
 
     // Select IIR filter for temperature sensor
-    uint8_t iirCoef = (uint8_t)_config.getIIRFileterCoef() << 2;
+    uint8_t iirCoef = (uint8_t)_config.getIIRFilterCoef() << BME680_IIR_FILTER_COEF_SHIFT;
     if (!updateRegister(BME680_config_REG, BME680_IIR_FILTER_COEF_MASK, iirCoef)) {
         PRINTLN_DEBUG(F("ERROR could not set IIR coef"));
         return;
     }
 
     // Define heater-on time
-    if (!writeRegister(BME680_gas_wait_0_REG, calculateHeaterDuration(150))) {
+    if (!writeRegister(BME680_gas_wait_0_REG, calculateHeaterDuration(_config.getGasHeatDuration()))) {
         PRINTLN_DEBUG(F("ERROR could not set heater duration"));
         return;    
     }
 
     // Enable gas coversion 
-    updateTemperatureTargetResistance(320, 25);
+    updateTemperatureTargetResistance(_config.getGasHeaterTemperature(), 25);
  
     // Select index of heater set-point and turn on gas
-    updateRegister(BME680_ctrl_gas_1_REG, 0b00001111 | 0b00010000, 0x00 | 0x10 ); // index 0 & on gas heater
+    updateRegister(BME680_ctrl_gas_1_REG, BME680_nb_conv_MASK | BME680_run_gas_MASK, 0 | BME680_run_gas_ON ); // index 0 & on gas heater
 
     _sensorConfigured = true;
 }
@@ -305,7 +311,7 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     PRINT_DEBUG(F("\n")); 
 
     // now that we have a current temperature, update the gas resitance sensor calibration
-    updateTemperatureTargetResistance(320, temp_comp/100);
+    updateTemperatureTargetResistance(_config.getGasHeaterTemperature(), temp_comp/100);
 
     //
     // Transmit buffer format:

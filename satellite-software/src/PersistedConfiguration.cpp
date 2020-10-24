@@ -16,10 +16,27 @@
 #define OFFSET_GYRO_SENSITIVITY            9      // 1 byte
 #define OFFSET_MAGNETIC_SENSITIVITY        10     // 1 byte
 
+#define CONFIG_SATELLITE_BLOCK_SIZE        11
+
+#define CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR  (CONFIG_EEPROM_BASE_ADDR+CONFIG_SATELLITE_BLOCK_SIZE)
+
+#if AMBASAT_MISSION_SENSOR == SENSOR_BME680
+#define OFFSET_TEMP_OVERSAMPLING            0       // 1 byte
+#define OFFSET_HUMIDITY_OVERSAMPLING        1       // 1 byte
+#define OFFSET_PRESSURE_OVERSAMPLING        2       // 1 byte
+#define OFFSET_IIR_COEF                     3       // 1 byte
+#define OFFSET_GAS_HEAT_DURATION            4       // 2 bytes
+#define OFFSET_GAS_HEAT_TEMP                6       // 2 bytes
+
+#define CONFIG_MISSION_SENSOR_BLOCK_SIZE    8
+#else
+#define CONFIG_MISSION_SENSOR_BLOCK_SIZE    0
+#endif
+
+#define CONFIG_DATA_BLOCK_SIZE             (CONFIG_SATELLITE_BLOCK_SIZE+CONFIG_MISSION_SENSOR_BLOCK_SIZE)
+
 #define CONFIG_CRC_ADDR                    (E2END-5)    // 4 bytes prior to the last byte
 
-#define CONFIG_DATA_BLOCK_SIZE             11
-                       
 
 PersistedConfiguration::PersistedConfiguration()
 {
@@ -42,6 +59,16 @@ uint32_t PersistedConfiguration::getCRC(void) const
     buffer[OFFSET_ACCELERATION_SENSITIVITY] = _accelSensitivity;
     buffer[OFFSET_GYRO_SENSITIVITY] = _gyroSensitivity;
     buffer[OFFSET_MAGNETIC_SENSITIVITY] = _magneticSensitivity;
+
+    // mission sensor
+ #if AMBASAT_MISSION_SENSOR == SENSOR_BME680
+    buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_TEMP_OVERSAMPLING] = _temperatureOversampling;
+    buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_HUMIDITY_OVERSAMPLING] = _humidityOversampling;
+    buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_PRESSURE_OVERSAMPLING] = _pressureOversampling;
+    buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_IIR_COEF] = _iirCoefSetting;
+    buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_GAS_HEAT_DURATION] = _gasProfile0_duration;
+    buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_GAS_HEAT_TEMP] = _gasProfile0_targetTemp;
+#endif // AMBASAT_MISSION_SENSOR
 
     return calculateCRC(buffer, CONFIG_DATA_BLOCK_SIZE, 0x0131);
 }
@@ -77,6 +104,16 @@ void PersistedConfiguration::resetToDefaults(void)
     setGysroSensitivitySetting(GYRO_SENSITIVITY_245DPS, false);
     setMagneticSensitivitySetting(MAGNETIC_SENSITIVITY_4GAUSS, false);
 
+    // mission sensor
+ #if AMBASAT_MISSION_SENSOR == SENSOR_BME680
+    setTemperatureOversampling(BME680_OVERSAMPLING_8x, false);
+    setHumidityOversampling(BME680_OVERSAMPLING_8x, false);
+    setPressureOversampling(BME680_OVERSAMPLING_8x, false);
+    setIIRFilterCoef(BME_FILTER_COEF_3, false);
+    setGasHeatTemperature(320, false);
+    setGasHeatDuration(150, false);
+#endif // AMBASAT_MISSION_SENSOR
+
     // set flags to indicate EEPROM is set
     eeprom_update_byte((uint8_t*)0x0000, 0x00);
     eeprom_update_byte((uint8_t*)E2END, 0x00);
@@ -93,6 +130,16 @@ void PersistedConfiguration::loadAllCongigurations(void)
     _accelSensitivity = (AccelerationSensitivitySetting)eeprom_read_byte((uint8_t *)(CONFIG_EEPROM_BASE_ADDR+OFFSET_ACCELERATION_SENSITIVITY));
     _gyroSensitivity = (GyroSensitivitySetting)eeprom_read_byte((uint8_t *)(CONFIG_EEPROM_BASE_ADDR+OFFSET_GYRO_SENSITIVITY));
     _magneticSensitivity = (MagneticSensitivitySetting)eeprom_read_byte((uint8_t *)(CONFIG_EEPROM_BASE_ADDR+OFFSET_MAGNETIC_SENSITIVITY));
+
+    // mission sensor
+ #if AMBASAT_MISSION_SENSOR == SENSOR_BME680
+    _temperatureOversampling = (BME680SensorOversamplingSetting)eeprom_read_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_TEMP_OVERSAMPLING));
+    _humidityOversampling = (BME680SensorOversamplingSetting)eeprom_read_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_HUMIDITY_OVERSAMPLING));
+    _pressureOversampling = (BME680SensorOversamplingSetting)eeprom_read_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_PRESSURE_OVERSAMPLING));
+    _iirCoefSetting = (BME680IIRFilterCoefSetting)eeprom_read_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_IIR_COEF));
+    _gasProfile0_duration = (uint16_t)eeprom_read_word((uint16_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_GAS_HEAT_DURATION));
+    _gasProfile0_targetTemp = (uint16_t)eeprom_read_word((uint16_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_GAS_HEAT_TEMP));
+#endif // AMBASAT_MISSION_SENSOR
 
     if (checkCRC()) {
         PRINT_DEBUG(F("  Loaded configuration with:\n    reboot count = "));
@@ -156,3 +203,67 @@ void PersistedConfiguration::setMagneticSensitivitySetting(MagneticSensitivitySe
         updateCRC();
     }
 }
+
+//
+// Mission Sensor
+//
+
+
+#if AMBASAT_MISSION_SENSOR == SENSOR_BME680
+void PersistedConfiguration::setTemperatureOversampling(BME680SensorOversamplingSetting setting, bool calculateCRC)
+{
+    eeprom_update_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_TEMP_OVERSAMPLING), setting);
+    _temperatureOversampling = setting;
+    if (calculateCRC) {
+        updateCRC();
+    }    
+}
+
+void PersistedConfiguration::setHumidityOversampling(BME680SensorOversamplingSetting setting, bool calculateCRC)
+{
+    eeprom_update_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_HUMIDITY_OVERSAMPLING), setting);
+    _humidityOversampling = setting;
+    if (calculateCRC) {
+        updateCRC();
+    }    
+}
+
+void PersistedConfiguration::setPressureOversampling(BME680SensorOversamplingSetting setting, bool calculateCRC)
+{
+    eeprom_update_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_PRESSURE_OVERSAMPLING), setting);
+    _humidityOversampling = setting;
+    if (calculateCRC) {
+        updateCRC();
+    }  
+}
+
+void PersistedConfiguration::setIIRFilterCoef(BME680IIRFilterCoefSetting setting, bool calculateCRC)
+{
+    eeprom_update_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_IIR_COEF), setting);
+    _iirCoefSetting = setting;
+    if (calculateCRC) {
+        updateCRC();
+    } 
+}
+
+void PersistedConfiguration::setGasHeatDuration(int16_t setting, bool calculateCRC, uint8_t profile)
+{
+    // for now, profile is ignored
+    eeprom_update_word((uint16_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_GAS_HEAT_DURATION), setting);
+    _gasProfile0_duration = setting;
+    if (calculateCRC) {
+        updateCRC();
+    }
+}
+
+void PersistedConfiguration::setGasHeatTemperature(int16_t setting, bool calculateCRC, uint8_t profile)
+{
+    // for now, profile is ignored
+    eeprom_update_word((uint16_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_GAS_HEAT_TEMP), setting);
+    _gasProfile0_targetTemp = setting;
+    if (calculateCRC) {
+        updateCRC();
+    }
+}
+
+#endif

@@ -40,7 +40,7 @@ typedef enum {
     BME680_OVERSAMPLING_4x = 0b011,
     BME680_OVERSAMPLING_8x = 0b100,
     BME680_OVERSAMPLING_16x = 0b101
-} BME680SEnsorOversamplingSetting;
+} BME680SensorOversamplingSetting;
 
 typedef enum {
     BME_FILTER_COEF_0   = 0,
@@ -60,11 +60,28 @@ typedef enum {
 class PersistedConfiguration
 {
 private:
+    //
+    // satellite configuration
+    //
     uint32_t _rebootCount;
     uint32_t _uplinkFrameCount;
     AccelerationSensitivitySetting _accelSensitivity;
     GyroSensitivitySetting _gyroSensitivity;
     MagneticSensitivitySetting _magneticSensitivity;
+
+    //
+    // Mission Sensor Configuration
+    //
+#if AMBASAT_MISSION_SENSOR == SENSOR_BME680
+    BME680SensorOversamplingSetting _temperatureOversampling;
+    BME680SensorOversamplingSetting _humidityOversampling;
+    BME680SensorOversamplingSetting _pressureOversampling;
+    BME680IIRFilterCoefSetting _iirCoefSetting;
+    int16_t _gasProfile0_targetTemp;
+    int16_t _gasProfile0_duration;
+
+#endif //AMBASAT_MISSION_SENSOR
+
 
     bool isEEPROMErased(void) const;
     void loadAllCongigurations(void);
@@ -102,16 +119,29 @@ public:
     void setMagneticSensitivitySetting(MagneticSensitivitySetting setting, bool updateCRC = true);
 
     //
-    // BME680
+    // Mission Sensor
     //
+
 #if AMBASAT_MISSION_SENSOR == SENSOR_BME680
-    BME680SEnsorOversamplingSetting getTemperatureOversampling(void) const          { return BME680_OVERSAMPLING_4x; }
+    // BME680
+    BME680SensorOversamplingSetting getTemperatureOversampling(void) const          { return _temperatureOversampling; }
+    void setTemperatureOversampling(BME680SensorOversamplingSetting setting, bool updateCRC = true);
 
-    BME680SEnsorOversamplingSetting getHumidityOversampling(void) const             { return BME680_OVERSAMPLING_4x; }
+    BME680SensorOversamplingSetting getHumidityOversampling(void) const             { return _humidityOversampling; }
+    void setHumidityOversampling(BME680SensorOversamplingSetting setting, bool updateCRC = true);
 
-    BME680SEnsorOversamplingSetting getPressureOversampling(void) const             { return BME680_OVERSAMPLING_4x; }
+    BME680SensorOversamplingSetting getPressureOversampling(void) const             { return _pressureOversampling; }
+    void setPressureOversampling(BME680SensorOversamplingSetting setting, bool updateCRC = true);
 
-    BME680IIRFilterCoefSetting getIIRFileterCoef(void) const                        { return BME_FILTER_COEF_3; }
+    BME680IIRFilterCoefSetting getIIRFilterCoef(void) const                        { return _iirCoefSetting; }
+    void setIIRFilterCoef(BME680IIRFilterCoefSetting setting, bool updateCRC = true);
+
+    int16_t getGasHeatDuration(uint8_t profile = 0) const                           { return _gasProfile0_duration; }
+    void setGasHeatDuration(int16_t setting, bool updateCRC = true, uint8_t profile = 0);
+
+    int16_t getGasHeaterTemperature(uint8_t profile = 0) const                      { return _gasProfile0_targetTemp; }
+    void setGasHeatTemperature(int16_t setting, bool updateCRC = true, uint8_t profile = 0);
+
 #endif
 };
 

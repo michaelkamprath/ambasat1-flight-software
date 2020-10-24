@@ -83,7 +83,16 @@ This command will have a second byte that represents the minimum number of 8 sec
 
 #### Reset Downlink Frame Count
 
-#### Sensor Sensitivity Adjustment
+#### Sensor Configuration Adjustment
+
+##### Sensor 3 - BME680
+The following variables will be abl to be configured for the BME680 sensor:
+
+* **Temperature Oversampling** - 
+* **Pressure Oversampling** -
+* **Humidity Oversampling** -
+* **IIR Filter Coeficient** -
+* **Configuration of each Gas Heater Profile** - Each gas heather profile consists of a target temperature and the amount of time (in milliseconds) that the heater will be held at that temperature before the gas resistance is measured. The BME680 can have up to 10 different gas heater profiles defined for measuring gas resistance. Currently this code only supports one profile (#0) being used.
 
 #### Blink LED
 Because the aliens in space like blinking lights too. The command sensor port indicator is ignored, and a second byte is used to indicate the number of times the LED should be blinked. 
