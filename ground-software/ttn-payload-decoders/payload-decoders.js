@@ -202,9 +202,66 @@ function DecodeSTS21Sensor(bytes) {
 	};
 }
 
+function ConvertOversamplingSetting(setting) {
+	switch (setting) {
+		case 0:
+			return 0;
+			break;
+		case 1:
+			return 1;
+			break;
+		case 2:
+			return 2;
+			break;
+		case 3:
+			return 4;
+			break;
+		case 4:
+			return 8;
+			break;
+		case 5:
+			return 16;
+			break;
+		default:
+			return -1;
+			break;
+	}
+}
+
+function ConverIIRCoefSetting(setting) {
+	switch (setting) {
+		case 0:
+			return 0;
+			break;
+		case 1:
+			return 1;
+			break;
+		case 2:
+			return 3;
+			break;
+		case 3:
+			return 7;
+			break;
+		case 4:
+			return 15;
+			break;
+		case 5:
+			return 31;
+			break;
+		case 6:
+			return 63;
+			break;
+		case 7:
+			return 127;
+			break;
+		default:
+			return -1;
+			break;
+	}	
+}
 function DecodeBME680Sensor(bytes) {
 	// BME680 Sensor
-	if (bytes.length !== 12) {
+	if (bytes.length !== 18) {
 		return {
 			error: "payload length is not correct size",
 			port: port,
@@ -216,16 +273,29 @@ function DecodeBME680Sensor(bytes) {
 	var pressureReading = convertFourBytesToUnsignedInt(bytes[2], bytes[3], bytes[4], bytes[5]);
 	var humidityReading = convertTwoBytesToSignedInt(bytes[6], bytes[7]);
 	var resistanceReading = convertFourBytesToUnsignedInt(bytes[8], bytes[9], bytes[10], bytes[11]);
+	var temperatureOSSetting = (bytes[12]&0xF0) >> 4;
+	var humidityOSSetting = (bytes[12]&0x0F);
+	var pressureOSSetting = (bytes[13]&0xF0) >> 4;
+	var iirCoefSetting = (bytes[13]&0x0F);
+	var gasHeaterDuration = convertTwoBytesToSignedInt(bytes[14], bytes[15]);
+	var gasHeaterTemperature = convertTwoBytesToSignedInt(bytes[16], bytes[17]);
+
 	return {
 		temperature: tempReading/100.0,
 		pressure: pressureReading/100.0,
 		humidity: humidityReading/100.0,
-		gas_resistance: resistanceReading
+		gas_resistance: resistanceReading,
+		temperature_oversampling: ConvertOversamplingSetting(temperatureOSSetting),
+		humidity_oversampling: ConvertOversamplingSetting(humidityOSSetting),
+		pressure_oversampling: ConvertOversamplingSetting(pressureOSSetting),
+		iir_coefficient: ConverIIRCoefSetting(iirCoefSetting),
+		gas_heater_duration: gasHeaterDuration,
+		gas_heater_temperature: gasHeaterTemperature
 	};
 }
 function DecodeSI1132Sensor(bytes) {
 	// Si1132 sensor
-	if (bytes.length !== 6) {
+	if (bytes.length !== 9) {
 		return {
 			error: "payload length is not correct size",
 			port: port,
@@ -236,7 +306,11 @@ function DecodeSI1132Sensor(bytes) {
 	return {
 		uv: convertTwoBytesToSignedInt(bytes[0], bytes[1])/100.0,
 		visible: convertTwoBytesToSignedInt(bytes[2], bytes[3]),
-		ir: convertTwoBytesToSignedInt(bytes[4], bytes[5]),		
+		ir: convertTwoBytesToSignedInt(bytes[4], bytes[5]),
+		adc_gain_visible: bytes[6],
+		adc_gain_ir: bytes[7],
+		high_signal_visible: Boolean((bytes[8]&0x01) > 0),
+		high_signal_ir: Boolean((bytes[8]&0x02) > 0)
 	};
 }
 

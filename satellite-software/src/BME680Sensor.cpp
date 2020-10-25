@@ -3,6 +3,8 @@
 #include "Utilities.h"
 #include "PersistedConfiguration.h"
 
+#if AMBASAT_MISSION_SENSOR == SENSOR_BME680
+
 #define BME680_CHIP_ID_REG     0xD0
 #define BME680_RESET_REG       0xE0
 #define BME680_STATUS_REG      0x1D
@@ -320,8 +322,11 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     //      int32_t    - pressure in Pa
     //      int16_t    - humidity in %*100
     //      int32_t    - gas resistance in ohms
-    //
-    //  Total buffer size = 12
+    //      uint8_t    - temperature oversampling (high nibble) and humidity oversapling (low nibble)
+    //      uint8_t    _ pressure oversampling (high nibble) and IIR filter coef (low nibble)
+    //      uint16_t   - gas heater duration used for this measurment
+    //      uint16_t   - gas heater temperature used for this measurement
+    //  Total buffer size = 18
     //
 
     memset(_buffer, 0, BME680_RESULTS_BUFFER_SIZE);
@@ -329,6 +334,14 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     hton_int32(press_comp, &_buffer[2]);
     hton_int16(hum_comp/10, &_buffer[6]);
     hton_int32(gas_res, &_buffer[8]);
+
+    _buffer[12] = (_config.getTemperatureOversampling() << 4)&0xF0;
+    _buffer[12] |= _config.getHumidityOversampling()&0x0F;
+    _buffer[13] = (_config.getPressureOversampling() << 4)&0xF0;
+    _buffer[13] |= _config.getIIRFilterCoef()&0x0F;
+    hton_int16(_config.getGasHeatDuration(), &_buffer[14]);
+    hton_int16(_config.getGasHeaterTemperature(), &_buffer[16]);
+   
     return _buffer;
 }
 
@@ -482,3 +495,5 @@ int32_t BME680Sensor::calibratedGasResistance(uint8_t gas_adc_msb, uint8_t gas_a
 
     return gas_res;
 }
+
+#endif // AMBASAT_MISSION_SENSOR

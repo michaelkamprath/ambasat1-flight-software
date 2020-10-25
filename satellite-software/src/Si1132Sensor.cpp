@@ -1,11 +1,13 @@
 #include <Arduino.h>
 #include "Si1132Sensor.h"
 #include "Logging.h"
+#include "PersistedConfiguration.h"
+
+#if AMBASAT_MISSION_SENSOR == SENSOR_SI1132
 
 //
 // TODO:
 //  - Load calibration data from device and apply for more accurate measurements
-//  - Create sensitivity configurations to allow for easy adjustments under various conditions.
 //
 
 #define SI1132_PART_ID_REG          0x00
@@ -28,16 +30,19 @@
 #define SI1132_ALS_VIS_DATA1_REG    0x23
 #define SI1132_ALS_IR_DATA0_REG     0x24
 #define SI1132_ALS_IR_DATA1_REG     0x25
+#define SI1132_PS1_DATA0_REG        0x26
 #define SI1132_AUX_DATA0_REG        0x2C
 #define SI1132_AUX_DATA1_REG        0x2D
 #define SI1132_PARAM_RD_REG         0x2E
 #define SI1132_CHIP_STAT_REG        0x30
 
-#define SI1132_CMD_RESET        0x01
-#define SI1132_CMD_ALS_FORCE    0x06
-#define SI1132_CMD_ALS_AUTO     0x0E
-#define SI1132_CMD_PARAM_QUERY  0x80
-#define SI1132_CMD_PARAM_SET    0xA0
+#define SI1132_CMD_RESET            0x01
+#define SI1132_CMD_ALS_FORCE        0x06
+#define SI1132_CMD_ALS_AUTO         0x0E
+#define SI1132_CMD_GET_CAL_INDEX    0x11
+#define SI1132_CMD_GET_CAL          0x12
+#define SI1132_CMD_PARAM_QUERY      0x80
+#define SI1132_CMD_PARAM_SET        0xA0
 
 #define SI1132_PARAM_CHLIST                 0x01
 #define SI1132_PARAM_ALS_IR_ADCMUX          0x0E
@@ -47,12 +52,12 @@
 #define SI1132_PARAM_ALS_IR_ADC_COUNTER     0x1D
 #define SI1132_PARAM_ALS_IR_ADC_GAIN        0x1E
 #define SI1132_PARAM_ALS_IR_ADC_MISC        0x1F
-#define SI1132_PARAM_
 
 Si1132Sensor::Si1132Sensor(PersistedConfiguration& config)
     :   SensorBase(config),
         _MEAS_RATE0(SI1132_MEAS_RATE0_REG),
-        _MEAS_RATE1(SI1132_MEAS_RATE1_REG)
+        _MEAS_RATE1(SI1132_MEAS_RATE1_REG),
+        _sensorConfigured(false)
 {
 
     if (!begin())
@@ -117,11 +122,12 @@ bool Si1132Sensor::begin(void)
 
 bool Si1132Sensor::isActive(void) const
 {
-    return SensorBase::isActive();
+    return SensorBase::isActive() && _sensorConfigured;
 }
 
 void Si1132Sensor::setup(void)
 {
+    _sensorConfigured = false;
     if (!isFound()) {
         return;
     }
@@ -132,37 +138,75 @@ void Si1132Sensor::setup(void)
     // delay(10);
 
     // set UCOEF[0:3] to the default values
-    writeRegister(SI1132_UCOEF0_REG, 0x7B);
-    writeRegister(SI1132_UCOEF1_REG, 0x6B);
-    writeRegister(SI1132_UCOEF2_REG, 0x01);
-    writeRegister(SI1132_UCOEF3_REG, 0x00);
+    if (!(writeRegister(SI1132_UCOEF0_REG, 0x7B)
+            &&writeRegister(SI1132_UCOEF1_REG, 0x6B)
+            &&writeRegister(SI1132_UCOEF2_REG, 0x01)
+            &&writeRegister(SI1132_UCOEF3_REG, 0x00)
+    )) {
+        PRINTLN_DEBUG(F("ERROR could not set Si1132 UCOEF values"));
+        return;
+    }
  
     // turn on UV Index, ALS IR, and ALS Visible
     setParameter(SI1132_PARAM_CHLIST, 0xB0);
         
     // set up VIS sensor
     //  clock divide = 1
-    setParameter(SI1132_PARAM_ALS_VIS_ADC_GAIN, 0x00);
-    //  ADC count at 511
-    setParameter(SI1132_PARAM_ALS_VIS_ADC_COUNTER, 0b01110000);
-    // set for high sifnal (e.g., bright sun)
-    // param_res = setParameter(SI1132_PARAM_ALS_VIS_ADC_MISC, 0b00100000);
- 
+    uint8_t adcGain = _config.getVisibleADCGain();
+    if (!setParameter(SI1132_PARAM_ALS_VIS_ADC_GAIN, adcGain&0b00000111)) {
+        PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_VIS_ADC_GAIN"));
+        return;
+    }
+    //  ADC count is the 1's complement of ADC gain, shifted by 4
+    if (!setParameter(SI1132_PARAM_ALS_VIS_ADC_COUNTER, ((~adcGain) << 4)&0b01110000)) {
+        PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_VIS_ADC_COUNTER"));
+        return;
+    }
+    // set for high signal (e.g., bright sun)
+    if (!setParameter(
+            SI1132_PARAM_ALS_VIS_ADC_MISC,
+            _config.isVisibleHighSignalRange() ? 0b00100000 : 0x00 
+    )) {
+        PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_VIS_ADC_MISC"));
+        return;
+    }
+
     // set up IR sensor
     //  clock divide = 1
-    setParameter(SI1132_PARAM_ALS_IR_ADC_GAIN, 0x00);
+    adcGain = _config.getInfraRedADCGain();
+    if (!setParameter(SI1132_PARAM_ALS_IR_ADC_GAIN, adcGain&0b00000111)) {
+        PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_IR_ADC_GAIN"));
+        return;
+    }
    //  ADS count at 511
-    setParameter(SI1132_PARAM_ALS_IR_ADC_COUNTER, 0b01110000);
+    if (!setParameter(SI1132_PARAM_ALS_IR_ADC_COUNTER, ((~adcGain) << 4)&0b01110000)) {
+        PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_IR_ADC_COUNTER"));
+        return;
+    }
     //  small IR photodiode
-    setParameter(SI1132_PARAM_ALS_IR_ADCMUX, 0x00);
+    if (!setParameter(SI1132_PARAM_ALS_IR_ADCMUX, 0x00)) {
+        PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_IR_ADCMUX"));
+        return;
+    }
     //  set IR_RANGE bit for high signal. Must do "read and modify" per spec
-    // uint8_t cur_value = readParameter(SI1132_PARAM_ALS_IR_ADC_MISC)
-    // param_res = setParameter(SI1132_PARAM_ALS_IR_ADC_MISC, 0b00100000|cur_value);
+    uint8_t cur_value = readParameter(SI1132_PARAM_ALS_IR_ADC_MISC);
+    if (!setParameter(
+        SI1132_PARAM_ALS_IR_ADC_MISC, 
+        _config.isInfraRedHighSignalRange() ? (0b00100000|cur_value) : (0b11011111&cur_value)
+    )) {
+        PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_IR_ADC_MISC"));
+        return;
+    }
 
     // Place ins forced measurement mode
-    writeRegister(_MEAS_RATE0, 0x00);
-    writeRegister(_MEAS_RATE1, 0x00);
+    if (!writeRegister(_MEAS_RATE0, 0x00)) {
+        return;
+    }
+    if (!writeRegister(_MEAS_RATE1, 0x00)) {
+        return;
+    }
 
+    _sensorConfigured = true;
 }
 
 #define LOOP_TIMEOUT_MS 200
@@ -282,7 +326,19 @@ const uint8_t* Si1132Sensor::getCurrentMeasurementBuffer(void)
 
     // wait for measurements
     delay(1000);
-    
+    //
+    // Transmit buffer format:
+    //
+    //      int16_t    - UV Index*100
+    //      int16_t    - visible
+    //      int16_t    - infrared
+    //      uint8_t    - ADC Gain Visible
+    //      uint8_t    - ADC Gain InraRed
+    //      uint8_t    - High signal settings 0x01 = visible | 0x02 = IR
+    //
+    //  Total buffer size = 9
+    //
+
     // Note that network order is big endian. Arrange bytes accordingly.
     uint8_t localBuffer[4];
 
@@ -303,7 +359,11 @@ const uint8_t* Si1132Sensor::getCurrentMeasurementBuffer(void)
     _buffer[3] = localBuffer[0];
     _buffer[4] = localBuffer[3];
     _buffer[5] = localBuffer[2];
-  
+    _buffer[6] = _config.getVisibleADCGain();
+    _buffer[7] = _config.getInfraRedADCGain();
+    _buffer[8] = (_config.isVisibleHighSignalRange() ? 0x01 : 0)
+                |(_config.isInfraRedHighSignalRange() ? 0x02 : 0);
+
     PRINT_DEBUG(F("    UV index = "));
     PRINT_DEBUG(_buffer[0]*256+_buffer[1]);
     PRINT_DEBUG(F(", visible = "));
@@ -313,3 +373,6 @@ const uint8_t* Si1132Sensor::getCurrentMeasurementBuffer(void)
     PRINT_DEBUG(F("\n"));
     return _buffer;
 }
+
+
+#endif // AMBASAT_MISSION_SENSOR

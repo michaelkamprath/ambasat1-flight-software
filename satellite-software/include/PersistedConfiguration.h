@@ -79,7 +79,11 @@ private:
     BME680IIRFilterCoefSetting _iirCoefSetting;
     int16_t _gasProfile0_targetTemp;
     int16_t _gasProfile0_duration;
-
+#elif AMBASAT_MISSION_SENSOR == SENSOR_SI1132
+    uint8_t _adcGainVisible;
+    uint8_t _adcGainInfraRed;
+    bool _highSignalVisible;
+    bool _highSignalInfraRed;
 #endif //AMBASAT_MISSION_SENSOR
 
 
@@ -141,6 +145,20 @@ public:
 
     int16_t getGasHeaterTemperature(uint8_t profile = 0) const                      { return _gasProfile0_targetTemp; }
     void setGasHeatTemperature(int16_t setting, bool updateCRC = true, uint8_t profile = 0);
+
+#elif AMBASAT_MISSION_SENSOR == SENSOR_SI1132
+    // Si1132
+    uint8_t getVisibleADCGain(void) const                                           { return _adcGainVisible; }
+    void setVisibleADCGain(uint8_t setting, bool updateCRC = true);
+
+    uint8_t getInfraRedADCGain(void) const                                          { return _adcGainInfraRed; }
+    void setInfraRedADCGain(uint8_t setting, bool updateCRC = true);
+
+    bool isVisibleHighSignalRange(void) const                                       { return _highSignalVisible; }
+    void setIsVisibleHighSignalRange(bool setting, bool updateCRC = true);
+
+    bool isInfraRedHighSignalRange(void) const                                      { return _highSignalInfraRed; }
+    void setIsInfraRedHighSignalRange(bool setting, bool updateCRC = true);
 
 #endif
 };

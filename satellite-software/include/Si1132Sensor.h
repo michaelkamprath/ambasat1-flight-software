@@ -4,13 +4,16 @@
 
 class PersistedConfiguration;
 
+#define SI1132_RESULTS_BUFFER_SIZE    9
+
 class Si1132Sensor : public SensorBase
 {
 private:
-    uint8_t _buffer[6];
+    uint8_t _buffer[SI1132_RESULTS_BUFFER_SIZE];
     uint8_t _MEAS_RATE0;
     uint8_t _MEAS_RATE1;
-    
+    bool _sensorConfigured;
+
     bool begin(void);
     void reset(void);
     bool waitUntilSleep(void);
@@ -34,7 +37,7 @@ public:
     virtual void setup(void);
     virtual bool isActive(void) const;
     virtual const uint8_t* getCurrentMeasurementBuffer(void);
-    virtual uint8_t getMeasurementBufferSize() const            { return 6; }
+    virtual uint8_t getMeasurementBufferSize() const            { return SI1132_RESULTS_BUFFER_SIZE; }
     virtual uint8_t getPort() const                             { return 8; }
 };
 

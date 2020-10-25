@@ -29,6 +29,13 @@
 #define OFFSET_GAS_HEAT_TEMP                6       // 2 bytes
 
 #define CONFIG_MISSION_SENSOR_BLOCK_SIZE    8
+#elif AMBASAT_MISSION_SENSOR == SENSOR_SI1132
+#define OFFSET_ADC_GAIN_VISIBLE             0       // 1 byte
+#define OFFSET_ADC_GAIN_IR                  1       // 1 byte
+#define OFFSET_HIGH_SIGNAL_VISIBLE          2       // 1 byte
+#define OFFSET_HIGH_SIGNAL_IR               3       // 1 byte
+
+#define CONFIG_MISSION_SENSOR_BLOCK_SIZE    4
 #else
 #define CONFIG_MISSION_SENSOR_BLOCK_SIZE    0
 #endif
@@ -68,6 +75,11 @@ uint32_t PersistedConfiguration::getCRC(void) const
     buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_IIR_COEF] = _iirCoefSetting;
     buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_GAS_HEAT_DURATION] = _gasProfile0_duration;
     buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_GAS_HEAT_TEMP] = _gasProfile0_targetTemp;
+#elif AMBASAT_MISSION_SENSOR == SENSOR_SI1132
+    buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_ADC_GAIN_VISIBLE] = _adcGainVisible;
+    buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_ADC_GAIN_IR] = _adcGainInfraRed;
+    buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_HIGH_SIGNAL_VISIBLE] = (_highSignalVisible ? 1 : 0);
+    buffer[CONFIG_SATELLITE_BLOCK_SIZE+OFFSET_HIGH_SIGNAL_IR] = (_highSignalInfraRed ? 1 : 0);
 #endif // AMBASAT_MISSION_SENSOR
 
     return calculateCRC(buffer, CONFIG_DATA_BLOCK_SIZE, 0x0131);
@@ -112,6 +124,11 @@ void PersistedConfiguration::resetToDefaults(void)
     setIIRFilterCoef(BME_FILTER_COEF_3, false);
     setGasHeatTemperature(320, false);
     setGasHeatDuration(150, false);
+#elif AMBASAT_MISSION_SENSOR == SENSOR_SI1132
+    setVisibleADCGain(0, false);
+    setInfraRedADCGain(0, false);
+    setIsVisibleHighSignalRange(false, false);
+    setIsInfraRedHighSignalRange(false, false);
 #endif // AMBASAT_MISSION_SENSOR
 
     // set flags to indicate EEPROM is set
@@ -139,6 +156,11 @@ void PersistedConfiguration::loadAllCongigurations(void)
     _iirCoefSetting = (BME680IIRFilterCoefSetting)eeprom_read_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_IIR_COEF));
     _gasProfile0_duration = (uint16_t)eeprom_read_word((uint16_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_GAS_HEAT_DURATION));
     _gasProfile0_targetTemp = (uint16_t)eeprom_read_word((uint16_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_GAS_HEAT_TEMP));
+#elif AMBASAT_MISSION_SENSOR == SENSOR_SI1132
+    _adcGainVisible = eeprom_read_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_ADC_GAIN_VISIBLE));
+    _adcGainInfraRed = eeprom_read_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_ADC_GAIN_IR));
+    _highSignalVisible = (eeprom_read_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_HIGH_SIGNAL_VISIBLE)) > 0);
+    _highSignalInfraRed = (eeprom_read_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_HIGH_SIGNAL_IR)) > 0);
 #endif // AMBASAT_MISSION_SENSOR
 
     if (checkCRC()) {
@@ -264,6 +286,51 @@ void PersistedConfiguration::setGasHeatTemperature(int16_t setting, bool calcula
     if (calculateCRC) {
         updateCRC();
     }
+}
+#elif AMBASAT_MISSION_SENSOR == SENSOR_SI1132
+// Si1132
+void PersistedConfiguration::setVisibleADCGain(uint8_t setting, bool calculateCRC)
+{
+    // we only keep bottom 3 bits
+    uint8_t setting_value = setting&0b00000111;
+
+    eeprom_update_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_ADC_GAIN_VISIBLE), setting_value);
+    _adcGainVisible = setting_value;
+    if (calculateCRC) {
+        updateCRC();
+    } 
+}
+
+void PersistedConfiguration::setInfraRedADCGain(uint8_t setting, bool calculateCRC)
+{
+    // we only keep bottom 3 bits
+    uint8_t setting_value = setting&0b00000111;
+
+    eeprom_update_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_ADC_GAIN_IR), setting_value);
+    _adcGainInfraRed = setting_value;
+    if (calculateCRC) {
+        updateCRC();
+    } 
+}
+
+void PersistedConfiguration::setIsVisibleHighSignalRange(bool setting, bool calculateCRC)
+{
+    uint8_t eeprom_value = (setting ? 1 : 0);
+    eeprom_update_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_HIGH_SIGNAL_VISIBLE), eeprom_value);
+    _highSignalVisible = setting;
+    if (calculateCRC) {
+        updateCRC();
+    } 
+}
+
+void PersistedConfiguration::setIsInfraRedHighSignalRange(bool setting, bool calculateCRC)
+{
+    uint8_t eeprom_value = (setting ? 1 : 0);
+    eeprom_update_byte((uint8_t *)(CONFIG_MISSION_SENSOR_EEPROM_BASE_ADDR+OFFSET_HIGH_SIGNAL_IR), eeprom_value);
+    _highSignalVisible = setting;
+    if (calculateCRC) {
+        updateCRC();
+    } 
 }
 
 #endif

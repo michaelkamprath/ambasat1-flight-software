@@ -2,6 +2,9 @@
 #include "STS21Sensor.h"
 #include "Utilities.h"
 #include "Logging.h"
+#include "PersistedConfiguration.h"
+
+#if AMBASAT_MISSION_SENSOR == SENSOR_STS21
 
 #define STS21_CMD_GET_TEMPERATURE_NOHOLD        0b11110011
 #define STS21_CMD_SOFT_RESET                    0b11111110
@@ -121,3 +124,5 @@ const uint8_t* STS21Sensor::getCurrentMeasurementBuffer(void)
     PRINT_DEBUG(F("\n"));
     return _buffer;
 }
+
+#endif //AMBASAT_MISSION_SENSOR

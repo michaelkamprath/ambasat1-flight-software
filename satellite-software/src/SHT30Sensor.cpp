@@ -3,6 +3,9 @@
 #include "SHT30Sensor.h"
 #include "Utilities.h"
 #include "Logging.h"
+#include "PersistedConfiguration.h"
+
+#if AMBASAT_MISSION_SENSOR == SENSOR_SHT30
 
 #define SHT30_CMD_READ_SERIALNBR    0x3780  // read serial number
 #define SHT30_CMD_READ_STATUS       0xF32D  // read status register
@@ -223,3 +226,5 @@ const uint8_t* SHT30Sensor::getCurrentMeasurementBuffer(void)
     if ((status&0x0400) > 0) _buffer[4] |= 0b00010000;
     return _buffer;
 }
+
+#endif // AMBASAT_MISSION_SENSOR
