@@ -108,9 +108,9 @@ bool LSM9DS1Sensor::isActive(void) const
     return (
         SensorBase::isActive()
         &&(
-            (_config.getAcceleratonSensitivitySetting() != ACCELERATION_SENSITIVITY_OFF)
-          ||(_config.getGysroSensitivitySetting() != GYRO_SENSITIVITY_OFF)
-          ||(_config.getMagneticSensitivitySetting() != MAGNETIC_SENSITIVITY_OFF)
+            (getAcceleratonSensitivitySetting() != ACCELERATION_SENSITIVITY_OFF)
+          ||(getGysroSensitivitySetting() != GYRO_SENSITIVITY_OFF)
+          ||(getMagneticSensitivitySetting() != MAGNETIC_SENSITIVITY_OFF)
         )
     );
 }
@@ -145,9 +145,9 @@ void LSM9DS1Sensor::setSensorConfig(void)
     writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG4_M, 0x00);
 
     // now set the sensor sensitivity settings to their configured settings.
-    setAccelFS(_config.getAcceleratonSensitivitySetting());
-    setGyroFS(_config.getGysroSensitivitySetting());
-    setMagnetFS(_config.getMagneticSensitivitySetting());
+    setAccelFS(getAcceleratonSensitivitySetting());
+    setGyroFS(getGysroSensitivitySetting());
+    setMagnetFS(getMagneticSensitivitySetting());
  }
 
 void LSM9DS1Sensor::setAccelFS(AccelerationSensitivitySetting config)
@@ -303,9 +303,58 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
     setSensorValueAtBufferLocation(magneticData[0], 12);
     setSensorValueAtBufferLocation(magneticData[1], 14);
     setSensorValueAtBufferLocation(magneticData[2], 16);
-    _buffer[18] = (uint8_t)_config.getAcceleratonSensitivitySetting();
-    _buffer[18] |= (uint8_t)_config.getGysroSensitivitySetting();
-    _buffer[19] = (uint8_t)_config.getMagneticSensitivitySetting();
+    _buffer[18] = (uint8_t)getAcceleratonSensitivitySetting();
+    _buffer[18] |= (uint8_t)getGysroSensitivitySetting();
+    _buffer[19] = (uint8_t)getMagneticSensitivitySetting();
    
     return _buffer;
+}
+
+//
+// Sensor Configuration Delegate
+//
+
+#define OFFSET_ACCELERATION_SENSITIVITY    0      // 1 byte
+#define OFFSET_GYRO_SENSITIVITY            1      // 1 byte
+#define OFFSET_MAGNETIC_SENSITIVITY        2     // 1 byte
+
+#define LSM9DS1_CONFIG_BLOCK_SIZE          3
+
+uint8_t LSM9DS1Sensor::configBlockSize( void ) const
+{
+    return LSM9DS1_CONFIG_BLOCK_SIZE;
+}
+void LSM9DS1Sensor::setDefaultValues(void)
+{
+    setAcceleratonSensitivitySetting(ACCELERATION_SENSITIVITY_2G);
+    setGysroSensitivitySetting(GYRO_SENSITIVITY_245DPS);
+    setMagneticSensitivitySetting(MAGNETIC_SENSITIVITY_4GAUSS);
+}
+void LSM9DS1Sensor::loadConfigValues(void)
+{
+    _accelSensitivity = (AccelerationSensitivitySetting)eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_ACCELERATION_SENSITIVITY));
+    _gyroSensitivity = (GyroSensitivitySetting)eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_GYRO_SENSITIVITY));
+    _magneticSensitivity = (MagneticSensitivitySetting)eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_MAGNETIC_SENSITIVITY));
+}
+
+void LSM9DS1Sensor::writeConfigToBuffer(uint8_t* bufferBaseAddress) const
+{
+    bufferBaseAddress[OFFSET_ACCELERATION_SENSITIVITY] = _accelSensitivity;
+    bufferBaseAddress[OFFSET_GYRO_SENSITIVITY] = _gyroSensitivity;
+    bufferBaseAddress[OFFSET_MAGNETIC_SENSITIVITY] = _magneticSensitivity;    
+}
+
+void LSM9DS1Sensor::setAcceleratonSensitivitySetting(AccelerationSensitivitySetting setting) {
+    eeprom_update_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_ACCELERATION_SENSITIVITY), setting);
+    _accelSensitivity = setting;
+}
+
+void LSM9DS1Sensor::setGysroSensitivitySetting(GyroSensitivitySetting setting) {
+    eeprom_update_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_GYRO_SENSITIVITY), setting);
+    _gyroSensitivity = setting;
+}
+
+void LSM9DS1Sensor::setMagneticSensitivitySetting(MagneticSensitivitySetting setting) {
+    eeprom_update_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_MAGNETIC_SENSITIVITY), setting);
+    _magneticSensitivity = setting;
 }

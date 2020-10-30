@@ -52,6 +52,7 @@ AmbaSat1App::AmbaSat1App()
     else {
         AmbaSat1App::gApp = this;
     }
+    _config.setSensorConfigDelegates(&_lsm9DS1Sensor, &_missionSensor);
 }
 
 AmbaSat1App::~AmbaSat1App()
@@ -67,6 +68,7 @@ void AmbaSat1App::setup()
     digitalWrite(LED_PIN, LOW);
     digitalWrite(LED_PIN, HIGH);
 
+    _config.init();
     _lsm9DS1Sensor.setup();
     _missionSensor.setup();
 

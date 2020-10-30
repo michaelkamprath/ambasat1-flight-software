@@ -14,6 +14,11 @@ private:
     uint8_t _MEAS_RATE1;
     bool _sensorConfigured;
 
+    uint8_t _adcGainVisible;
+    uint8_t _adcGainInfraRed;
+    bool _highSignalVisible;
+    bool _highSignalInfraRed;
+
     bool begin(void);
     void reset(void);
     bool waitUntilSleep(void);
@@ -39,6 +44,28 @@ public:
     virtual const uint8_t* getCurrentMeasurementBuffer(void);
     virtual uint8_t getMeasurementBufferSize() const            { return SI1132_RESULTS_BUFFER_SIZE; }
     virtual uint8_t getPort() const                             { return 8; }
+
+    //
+    // Sensor Configuration Delegate
+    //
+
+    virtual uint8_t configBlockSize( void ) const;
+    virtual void setDefaultValues(void);
+    virtual void loadConfigValues(void);
+    virtual void writeConfigToBuffer( uint8_t* bufferBaseAddress) const;
+
+    uint8_t getVisibleADCGain(void) const                                           { return _adcGainVisible; }
+    void setVisibleADCGain(uint8_t setting);
+
+    uint8_t getInfraRedADCGain(void) const                                          { return _adcGainInfraRed; }
+    void setInfraRedADCGain(uint8_t setting);
+
+    bool isVisibleHighSignalRange(void) const                                       { return _highSignalVisible; }
+    void setIsVisibleHighSignalRange(bool setting);
+
+    bool isInfraRedHighSignalRange(void) const                                      { return _highSignalInfraRed; }
+    void setIsInfraRedHighSignalRange(bool setting);
+
 };
 
 

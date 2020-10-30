@@ -3,8 +3,6 @@
 #include "Logging.h"
 #include "PersistedConfiguration.h"
 
-#if AMBASAT_MISSION_SENSOR == SENSOR_SI1132
-
 //
 // TODO:
 //  - Load calibration data from device and apply for more accurate measurements
@@ -152,7 +150,7 @@ void Si1132Sensor::setup(void)
         
     // set up VIS sensor
     //  clock divide = 1
-    uint8_t adcGain = _config.getVisibleADCGain();
+    uint8_t adcGain = getVisibleADCGain();
     if (!setParameter(SI1132_PARAM_ALS_VIS_ADC_GAIN, adcGain&0b00000111)) {
         PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_VIS_ADC_GAIN"));
         return;
@@ -165,7 +163,7 @@ void Si1132Sensor::setup(void)
     // set for high signal (e.g., bright sun)
     if (!setParameter(
             SI1132_PARAM_ALS_VIS_ADC_MISC,
-            _config.isVisibleHighSignalRange() ? 0b00100000 : 0x00 
+            isVisibleHighSignalRange() ? 0b00100000 : 0x00 
     )) {
         PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_VIS_ADC_MISC"));
         return;
@@ -173,7 +171,7 @@ void Si1132Sensor::setup(void)
 
     // set up IR sensor
     //  clock divide = 1
-    adcGain = _config.getInfraRedADCGain();
+    adcGain = getInfraRedADCGain();
     if (!setParameter(SI1132_PARAM_ALS_IR_ADC_GAIN, adcGain&0b00000111)) {
         PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_IR_ADC_GAIN"));
         return;
@@ -192,7 +190,7 @@ void Si1132Sensor::setup(void)
     uint8_t cur_value = readParameter(SI1132_PARAM_ALS_IR_ADC_MISC);
     if (!setParameter(
         SI1132_PARAM_ALS_IR_ADC_MISC, 
-        _config.isInfraRedHighSignalRange() ? (0b00100000|cur_value) : (0b11011111&cur_value)
+        isInfraRedHighSignalRange() ? (0b00100000|cur_value) : (0b11011111&cur_value)
     )) {
         PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_IR_ADC_MISC"));
         return;
@@ -359,10 +357,10 @@ const uint8_t* Si1132Sensor::getCurrentMeasurementBuffer(void)
     _buffer[3] = localBuffer[0];
     _buffer[4] = localBuffer[3];
     _buffer[5] = localBuffer[2];
-    _buffer[6] = _config.getVisibleADCGain();
-    _buffer[7] = _config.getInfraRedADCGain();
-    _buffer[8] = (_config.isVisibleHighSignalRange() ? 0x01 : 0)
-                |(_config.isInfraRedHighSignalRange() ? 0x02 : 0);
+    _buffer[6] = getVisibleADCGain();
+    _buffer[7] = getInfraRedADCGain();
+    _buffer[8] = (isVisibleHighSignalRange() ? 0x01 : 0)
+                |(isInfraRedHighSignalRange() ? 0x02 : 0);
 
     PRINT_DEBUG(F("    UV index = "));
     PRINT_DEBUG(_buffer[0]*256+_buffer[1]);
@@ -375,4 +373,73 @@ const uint8_t* Si1132Sensor::getCurrentMeasurementBuffer(void)
 }
 
 
-#endif // AMBASAT_MISSION_SENSOR
+//
+// Sensor Configuration Delegate
+//
+
+#define OFFSET_ADC_GAIN_VISIBLE             0       // 1 byte
+#define OFFSET_ADC_GAIN_IR                  1       // 1 byte
+#define OFFSET_HIGH_SIGNAL_VISIBLE          2       // 1 byte
+#define OFFSET_HIGH_SIGNAL_IR               3       // 1 byte
+
+#define CONFIG_SI1132_SENSOR_BLOCK_SIZE    4
+
+uint8_t Si1132Sensor::configBlockSize( void ) const
+{
+    return CONFIG_SI1132_SENSOR_BLOCK_SIZE;
+}
+void Si1132Sensor::setDefaultValues(void)
+{
+    setVisibleADCGain(0);
+    setInfraRedADCGain(0);
+    setIsVisibleHighSignalRange(false);
+    setIsInfraRedHighSignalRange(false);
+}
+
+void Si1132Sensor::loadConfigValues(void)
+{
+    _adcGainVisible = eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_ADC_GAIN_VISIBLE));
+    _adcGainInfraRed = eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_ADC_GAIN_IR));
+    _highSignalVisible = (eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_HIGH_SIGNAL_VISIBLE)) > 0);
+    _highSignalInfraRed = (eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_HIGH_SIGNAL_IR)) > 0);
+}
+
+void Si1132Sensor::writeConfigToBuffer( uint8_t* bufferBaseAddress) const
+{
+    bufferBaseAddress[OFFSET_ADC_GAIN_VISIBLE] = _adcGainVisible;
+    bufferBaseAddress[OFFSET_ADC_GAIN_IR] = _adcGainInfraRed;
+    bufferBaseAddress[OFFSET_HIGH_SIGNAL_VISIBLE] = (_highSignalVisible ? 1 : 0);
+    bufferBaseAddress[OFFSET_HIGH_SIGNAL_IR] = (_highSignalInfraRed ? 1 : 0);
+}
+
+void Si1132Sensor::setVisibleADCGain(uint8_t setting)
+{
+    // we only keep bottom 3 bits
+    uint8_t setting_value = setting&0b00000111;
+
+    eeprom_update_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_ADC_GAIN_VISIBLE), setting_value);
+    _adcGainVisible = setting_value;
+}
+
+void Si1132Sensor::setInfraRedADCGain(uint8_t setting)
+{
+    // we only keep bottom 3 bits
+    uint8_t setting_value = setting&0b00000111;
+
+    eeprom_update_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_ADC_GAIN_IR), setting_value);
+    _adcGainInfraRed = setting_value;
+}
+
+void Si1132Sensor::setIsVisibleHighSignalRange(bool setting)
+{
+    uint8_t eeprom_value = (setting ? 1 : 0);
+    eeprom_update_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_HIGH_SIGNAL_VISIBLE), eeprom_value);
+    _highSignalVisible = setting;
+}
+
+void Si1132Sensor::setIsInfraRedHighSignalRange(bool setting)
+{
+    uint8_t eeprom_value = (setting ? 1 : 0);
+    eeprom_update_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_HIGH_SIGNAL_IR), eeprom_value);
+    _highSignalVisible = setting;
+}

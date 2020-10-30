@@ -6,8 +6,8 @@
 bool SensorBase::_isI2CSetUp = false;
 
 SensorBase::SensorBase(PersistedConfiguration& config)
-    : _isFound(false),
-      _config(config)
+    :   SensorConfigurationDelegate(config),
+        _isFound(false)
 {
     if (!_isI2CSetUp) {
         PRINTLN_INFO(F("Starting I2C interface."));

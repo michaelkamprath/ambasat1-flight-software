@@ -2,16 +2,15 @@
 #define __SensorBase__
 #include <Arduino.h>
 #include "LoRaPayloadBase.h"
+#include "PersistedConfiguration.h"
 
-class PersistedConfiguration;
 
-class SensorBase : public LoRaPayloadBase {
+class SensorBase : public LoRaPayloadBase, public SensorConfigurationDelegate {
 private:
     static bool _isI2CSetUp;
     bool _isFound;
 
 protected:
-    PersistedConfiguration& _config;
 
     // when doing multi-byte reads from registers, this indicates what bit
     // in the register address needs to be set to signal auto  incrementing in 
