@@ -1,6 +1,8 @@
 #ifndef __AmbaSat1Config__
 #define __AmbaSat1Config__
 #include <Arduino.h>
+#include <lmic.h>
+
 // IMPORTANT - IMPORTANT - IMPORTANT - IMPORTANT - IMPORTANT - IMPORTANT
 // 
 // Set the following three values to match your unique AmbaSat-1 satellite.
