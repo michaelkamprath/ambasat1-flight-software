@@ -295,9 +295,13 @@ void AmbaSat1App::handleCommand(uint8_t* recievedData, uint8_t recievedDataLen)
 {
     // Commands are identified in the first byte. Commands that the satellite supports:
     //
-    //  0x01 - Blink LED. The secondle byte is is split into two nibbles. The upper nible represents the 
-    //         number of times the LED should be blinked. The lower nibble indicates length of the blink 
-    //         as a the number of 0.25 second periods
+    //  0x01 - Blink LED. The second byte is is split into two nibbles. The uppper 2 bits indicate the
+    //         blink period as follows:
+    //              00 = 0.1 second blinks
+    //              01 = 0.5 second blinks
+    //              10 = 1 second blinks
+    //              11 = 2 second blinks.
+    //         The lower 6 bits are used to indicate the number of blinks.
     //
 
     if (recievedDataLen == 0) {
@@ -310,8 +314,23 @@ void AmbaSat1App::handleCommand(uint8_t* recievedData, uint8_t recievedDataLen)
     if (command == 0x01) {
         // blink
         if (recievedDataLen == 2 ) {
-            uint8_t blinkCount = (recievedData[1]&0xF0) >> 4;
-            uint16_t blinkDurationMillis = (recievedData[1]&0x0F)*250;
+            uint8_t blinkCount = (recievedData[1]&0x3F);
+            uint16_t blinkDurationMillis = 100;
+            switch (recievedData[1]&0xC0) {
+                default:
+                case 0x00:
+                    blinkDurationMillis = 100;
+                    break;
+                case 0x40:
+                    blinkDurationMillis = 500;
+                    break;                   
+                case 0x80:
+                    blinkDurationMillis = 1000;
+                    break;                   
+                case 0xC0:
+                    blinkDurationMillis = 2000;
+                    break;                   
+            }
             PRINT_DEBUG(F("  blink command. count = "));
             PRINT_DEBUG(blinkCount);
             PRINT_DEBUG(F(", duration = "));
