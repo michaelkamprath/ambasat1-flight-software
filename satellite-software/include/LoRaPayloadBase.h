@@ -19,6 +19,12 @@ public:
 
     // defines the LoRaWAN port the payload should be sent across.
     virtual uint8_t getPort() const = 0;
+
+#ifdef ENABLE_AMBASAT_COMMANDS
+    // handles a command payload. 
+    virtual void handleCommand(uint8_t* recievedData, uint8_t recievedDataLen)          { ; }
+
+#endif
 };
 
 #endif // __LoRaPayloadBase__

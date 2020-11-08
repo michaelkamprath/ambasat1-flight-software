@@ -16,9 +16,10 @@
 const lmic_pinmap lmic_pins = {
   .nss = 10,
   .rxtx = LMIC_UNUSED_PIN,
-  .rst = 7,
+  .rst = LMIC_UNUSED_PIN,
   .dio = {2, A2, LMIC_UNUSED_PIN},
 };
+
 
 //
 // Global Variable so LMIC functions can access app object
@@ -44,6 +45,10 @@ AmbaSat1App::AmbaSat1App()
         _lsm9DS1Sensor(_config),
         _missionSensor(_config),
         _sleeping(false)
+#ifdef ENABLE_AMBASAT_COMMANDS
+        ,
+        _queuedCommandPort(0xFF)
+#endif
 {
     if (AmbaSat1App::gApp != nullptr) {
         // complain loudly. Only one app object should be created.
@@ -58,7 +63,6 @@ AmbaSat1App::AmbaSat1App()
 AmbaSat1App::~AmbaSat1App()
 {
     AmbaSat1App::gApp = nullptr;
-
 }
 
 void AmbaSat1App::setup()
@@ -78,6 +82,9 @@ void AmbaSat1App::setup()
 
     os_init();
     LMIC_reset();
+    LMIC_setClockError(MAX_CLOCK_ERROR * 10 / 100);
+//    LMIC_setDrTxpow(DR_SF9, KEEP_TXPOW);
+
     // Set static session parameters. Instead of dynamically establishing a session
     // by joining the network, precomputed session parameters are be provided.
     uint8_t appskey[sizeof(APPSKEY)];
@@ -142,8 +149,6 @@ void AmbaSat1App::setup()
 
 void AmbaSat1App::loop() 
 {
-    digitalWrite(LED_PIN, HIGH);
-
     PRINTLN_INFO(F("Transmitting Satellite Status."));
     sendSensorPayload(*this);
     _sleeping = false;
@@ -159,7 +164,6 @@ void AmbaSat1App::loop()
         sendSensorPayload(_missionSensor);
         _sleeping = false;
     }
-    digitalWrite(LED_PIN, LOW);
     //
     // technically there is some risk that the satellite will loose power between
     // the first transmission above and the last one, and in such case we will not
@@ -167,6 +171,11 @@ void AmbaSat1App::loop()
     // number of time we write to EEPROM.
     //
     _config.setUplinkFrameCount(LMIC.seqnoUp);
+
+    #ifdef ENABLE_AMBASAT_COMMANDS
+    // handle any command that got queued
+    processQueuedCommand();
+    #endif
 
     // flush serial before going to sleep
     Serial.flush();
@@ -192,28 +201,131 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
         PRINTLN_INFO(F("Sensor data is NULL."));
         return;
     }
+
+    // LMIC seems to crash here if we previously just recieved a downlink AND
+    // there are any pending data in the Serial queue. So flush the Serial queue.
+    Serial.flush();
     LMIC_setTxData2(
         sensor.getPort(),
         (xref2u1_t)data_ptr,
         sensor.getMeasurementBufferSize(),
         0
     ); 
-#if LOG_LEVEL >= LOG_LEVEL_INFO
-    PRINT_INFO(F("    Sending payload = { "));
-    for (uint8_t i = 0; i < sensor.getMeasurementBufferSize(); i++ ) {
-        PRINT_INFO(F("0x"));
-        PRINT_HEX_INFO( data_ptr[i]);
-        if (i < sensor.getMeasurementBufferSize() - 1 ) {
-            PRINT_INFO(F(", "));
-        }
-    }
-    PRINT_INFO(F(" }\n"));
-#endif
+  
+    // Again, LMIC seems to flake out after recived downlinks without this delay. 
+    // Seems to be some interaction with the serial prints that follow. Since 
+    // LMIC is a black box and 50 milliseconds isn't all that much, so just wait.
+    delay(50);
+
     while(!_sleeping) {
         os_runloop_once();
     }
+
+#if LOG_LEVEL >= LOG_LEVEL_INFO
+    PRINT_INFO(F("    Sending payload = "));
+    print_buffer(data_ptr, sensor.getMeasurementBufferSize());
+    Serial.flush();
+#endif  
 }
 
+#ifdef ENABLE_AMBASAT_COMMANDS
+void AmbaSat1App::queueCommand(uint8_t port, uint8_t* recievedData, uint8_t recievedDataLen)
+{
+    if ((_queuedCommandPort == 0xFF) && (recievedDataLen <= QUEUED_COMMAND_BUFFER_SIZE )) {
+        _queuedCommandPort = port;
+        memcpy(_queuedCommandDataBuffer, recievedData, recievedDataLen);
+        _queuedCommandDataLength = recievedDataLen;
+        PRINT_DEBUG(F("  queued command on port "));
+        PRINT_DEBUG(port);
+        PRINT_DEBUG(F(" with data len = "));
+        PRINT_DEBUG(recievedDataLen);
+        PRINT_DEBUG(F("\n"));
+    }
+}
+
+void AmbaSat1App::processQueuedCommand(void)
+{
+    if (_queuedCommandPort == 0xFF) {
+        PRINTLN_DEBUG(F("No queued commands to process"));
+        return;
+    }
+
+    // this method decodes the command header and routes the data to the appropriate handler
+    PRINT_DEBUG(F("Recieved command on port "));
+    PRINT_DEBUG(_queuedCommandPort);
+    PRINT_DEBUG(F(", payload = "));
+#if LOG_LEVEL >= LOG_LEVEL_DEBUG
+    print_buffer(_queuedCommandDataBuffer, _queuedCommandDataLength);
+#endif
+
+    // The port is used to determine which handler the command should be routed to:
+    //      port 2 = satellite commands
+    //      port 3 = LSM9DS1 commands
+    //      port 4 = Mission sensor comands
+    switch (_queuedCommandPort) {
+        case 2:
+            this->handleCommand(_queuedCommandDataBuffer, _queuedCommandDataLength);
+            break;
+        case 3:
+            _lsm9DS1Sensor.handleCommand(_queuedCommandDataBuffer, _queuedCommandDataLength);
+            break;
+        case 4:
+            _missionSensor.handleCommand(_queuedCommandDataBuffer, _queuedCommandDataLength);
+            break;
+        default:
+            PRINT_ERROR(F("ERROR - recieved cmd on port = "));
+            PRINT_ERROR(_queuedCommandPort);
+            PRINT_ERROR(F("\n"));
+            break;
+    }
+
+    // reset port back to no command
+    _queuedCommandPort = 0xFF;
+}
+
+void AmbaSat1App::handleCommand(uint8_t* recievedData, uint8_t recievedDataLen)
+{
+    // Commands are idntified in the first byte. Commands that the satellite supports:
+    //
+    //  0x01 - Blink LED. The secondle byte is is split into two nibbles. The upper nible represents the 
+    //         number of times the LED should be blinked. The lower nibble indicates length of the blink 
+    //         as a the number of 0.25 second periods
+    //
+
+    if (recievedDataLen == 0) {
+        PRINTLN_DEBUG(F("Recieved command with 0-length payload"));
+        return;
+    }
+
+    uint8_t command = recievedData[0];
+
+    if (command == 0x01) {
+        // blink
+        if (recievedDataLen == 2 ) {
+            uint8_t blinkCount = (recievedData[1]&0xF0) >> 4;
+            uint16_t blinkDurationMillis = (recievedData[1]&0x0F)*250;
+            PRINT_DEBUG(F("  blink command. count = "));
+            PRINT_DEBUG(blinkCount);
+            PRINT_DEBUG(F(", duration = "));
+            PRINT_DEBUG(blinkDurationMillis);   
+            PRINT_DEBUG(F(" ms\n"));
+
+            for (int16_t i = 0; i <blinkCount; i++) {
+                digitalWrite(LED_PIN, HIGH);
+                delay(blinkDurationMillis);
+                digitalWrite(LED_PIN, LOW);
+                if (i < blinkCount-1) {
+                    delay(blinkDurationMillis);
+                }
+            }
+        } else {
+            PRINT_DEBUG(F("   ERROR - blink command. dataLen = "));
+            PRINT_DEBUG(recievedDataLen);
+            PRINT_DEBUG(F("\n"));
+        }
+    }
+}
+#endif
 // initial job
 static osjob_t initjob;
 
@@ -221,8 +333,10 @@ void initfunc(osjob_t* j)
 {
     // reset MAC state
     LMIC_reset();
+    LMIC_setClockError(MAX_CLOCK_ERROR * 5 / 100);
 
     // init done - onEvent() callback will be invoked...
+    PRINTLN_INFO(F("LMIC initFunc complete"));
 }
 
 // These callbacks are only used in over-the-air activation, so they are
@@ -237,95 +351,79 @@ void os_getDevKey (u1_t* buf) { }
 // =========================================================================================================================================
 void onEvent(ev_t ev)
 {
-    int i, j;
 
     switch (ev)
     {
         case EV_SCAN_TIMEOUT:
             PRINTLN_DEBUG(F("EV_SCAN_TIMEOUT"));
-        break;
+            break;
         case EV_BEACON_FOUND:
             PRINTLN_DEBUG(F("EV_BEACON_FOUND"));
-        break;
+            break;
         case EV_BEACON_MISSED:
             PRINTLN_DEBUG(F("EV_BEACON_MISSED"));
-        break;
+            break;
         case EV_BEACON_TRACKED:
             PRINTLN_DEBUG(F("EV_BEACON_TRACKED"));
-        break;
+            break;
         case EV_JOINING:
             PRINTLN_DEBUG(F("EV_JOINING"));
-        break;
+            break;
         case EV_JOINED:
             PRINTLN_DEBUG(F("EV_JOINED"));
             // Disable link check validation (automatically enabled
             // during join, but not supported by TTN at this time).
             LMIC_setLinkCheckMode(0);
             digitalWrite(LED_PIN, LOW);
-        break;
+            break;
         case EV_RFU1:
             PRINTLN_DEBUG(F("EV_RFU1"));
-        break;
+            break;
         case EV_JOIN_FAILED:
             PRINTLN_DEBUG(F("EV_JOIN_FAILED"));
-        break;
+            break;
         case EV_REJOIN_FAILED:
             PRINTLN_DEBUG(F("EV_REJOIN_FAILED"));
             // Re-init
             os_setCallback(&initjob, initfunc);
-        break;
+            break;
         case EV_TXCOMPLETE:
             AmbaSat1App::gApp->_sleeping = true;
-
-            if (LMIC.dataLen)
+            if (LMIC.dataLen > 0)
             {
-                // data received in rx slot after tx
-                // if any data received, a LED will blink
-                // this number of times, with a maximum of 10
-                Serial.print(F("Data Received: "));
-                Serial.println(LMIC.frame[LMIC.dataBeg], HEX);
-                i=(LMIC.frame[LMIC.dataBeg]);
-                // i (0..255) can be used as data for any other application
-                // like controlling a relay, showing a display message etc.
-                if (i>10)
-                {
-                    i=10;     // maximum number of BLINKs
-                }
+#ifdef ENABLE_AMBASAT_COMMANDS
+                AmbaSat1App::gApp->queueCommand(
+                    LMIC.frame[LMIC.dataBeg-1],
+                    &LMIC.frame[LMIC.dataBeg],
+                    LMIC.dataLen
+                );
 
-                for(j = 0; j < i ; j++)
-                {
-                    digitalWrite(LED_PIN, HIGH);
-                    delay(200);
-                    digitalWrite(LED_PIN, LOW);
-                    delay(400);
-                }
+#else
+                PRINTLN_DEBUG(F("WARNING Recieved a downlink but code is not enabled to process it."));
+#endif
             }
-
-            PRINTLN_INFO(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
-            delay(50);  // delay to complete Serial Output before Sleeping
-
-            // Schedule next transmission
-            // next transmission will take place after next wake-up cycle in main loop
-        break;
+            PRINTLN_ERROR(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
+            Serial.flush();
+            break;
         case EV_LOST_TSYNC:
             PRINTLN_DEBUG(F("EV_LOST_TSYNC"));
-        break;
+            break;
         case EV_RESET:
             PRINTLN_DEBUG(F("EV_RESET"));
-        break;
+            break;
         case EV_RXCOMPLETE:
             // data received in ping slot
             PRINTLN_DEBUG(F("EV_RXCOMPLETE"));
-        break;
+            break;
         case EV_LINK_DEAD:
             PRINTLN_DEBUG(F("EV_LINK_DEAD"));
-        break;
+            break;
         case EV_LINK_ALIVE:
             PRINTLN_DEBUG(F("EV_LINK_ALIVE"));
-        break;
+            break;
         default:
             PRINTLN_DEBUG(F("Unknown event"));
-        break;
+            break;
     }
 }
 

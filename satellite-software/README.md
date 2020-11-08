@@ -19,6 +19,14 @@ Below are the intended requirements for the finalized AmbaSat-1 flight software.
 
 ## Requirements
 
+### Hardware Configuration
+The AmbaSat-1 picosat is cuilt with an external 4 MHz resonator to drive the ATmega328P microcontroller, however the default fuse settings for the ATmega328P has it using its own internal clock at 1 MHz. This is done to minimize the power requirements of the AmbaSat-1 picosat. However, utilizing the internal clock precludes the AmbaSata-1 from recieving downlinks from The Things Network due to the internal clock not being accurate enough to properly detect the downlink radio transmission. As a result, two hardware configurations will be enabled in this code base, and are identified by their board description files ([found here](https://github.com/michaelkamprath/ambasat1-flight-software/tree/master/boards/)):
+
+* **AmbaSat-1** - This is the original board definition provided by the AmbaSat-1 makers. This definition expects the ATmega328P to be configured to use the internal clock at 1 Mhz. The ATmega328P fuses for this board are `(E:FE, H:D6, L:62)`.
+* **AmbaSat-1b** -  This board definition enables the use of the external 4 MHz resonator on the AmbaSat-1 picosat and a BOD of 1.8V. This hardware configuration is required if you wish to enable commands to the AmbaSat-1 via downlinks. The ATmega328P fuses for this board are `(E:FE, H:D6, L:F7)`.
+
+The sole difference betwee these hardware configurations is the fuse configuration the ATmega328P is burned with, and the corresponding configuration to the MiniCore bootloader that is burned on the the chip.
+
 ### Telemetry and Status Uplinks
 
 #### Uplink Ports
@@ -70,7 +78,7 @@ The `CMD Status` Uplink will have the following format: **TBD**
 TBD
 
 ### Command Request Downlinks
-In normal operations, the AmbaSat is not intended to be regularly sent commands to change how it operates. However, the ability to alter operational parameters of the satellite will be enabled using the TTN downlink abilities. 
+In normal operations, the AmbaSat is not intended to be regularly sent commands to change how it operates. However, the ability to alter operational parameters of the satellite will be enabled using the TTN downlink abilities. To enable command downlinks, the AmbaSat must use the hardware configuration that enables downlinks to be recieved (see Hardware Configuration above).
 
 The command will consist of at least 1 byte. This byte will be split into the high and low 4 bits. The high 4 bits will represent the actual command, and the low fit bits will represent the sensor ports the command pertains to, if relevant. As a result, there can only be 16 commands that the satellite will recognize, and there are only 15 sensor ports the satellite can support. A port value of 0 for a command indicates the command does not apply to a particular sensor. The command can have an optional second and third byte that will contain configuration data, depending on the command. 
 

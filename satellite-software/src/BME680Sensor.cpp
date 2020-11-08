@@ -221,13 +221,11 @@ bool BME680Sensor::isActive(void) const
 void BME680Sensor::startMeasurementProcess(void)
 {
     if (isActive()) {
-        PRINT_DEBUG(F("    starting BME680 measurement process ..."));
         // Trigger forced mode measurement
         if (!updateRegister(BME680_ctrl_meas_REG, 0b00000011, 0x01)) { // forced mode
             PRINTLN_ERROR(F("ERROR setting BME660 forced mode"));
             return;
         }
-        PRINT_DEBUG(F(" Done!\n"));
     }
 }
 
@@ -292,7 +290,10 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     readRegisters(0x2A,&adc_buffer[8], 2);
 
     PRINT_DEBUG(F("    ADC = "));
+#if LOG_LEVEL >= LOG_LEVEL_DEBUG
     print_buffer(adc_buffer, 8);
+#endif
+
     int32_t t_fine;
     int32_t temp_comp = calibratedTemperatureReading(adc_buffer[3], adc_buffer[4], adc_buffer[5], t_fine);
     int32_t press_comp = calibratedPressureReading(adc_buffer[0], adc_buffer[1], adc_buffer[2], t_fine);

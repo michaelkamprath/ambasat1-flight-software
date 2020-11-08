@@ -6,6 +6,7 @@
 #include "Sensors.h"
 #include "PersistedConfiguration.h"
 
+#define SATELLITE_STATUS_BUFFER_SIZE 7
 
 class AmbaSat1App : public LoRaPayloadBase {
 private:
@@ -22,7 +23,7 @@ private:
     BME680Sensor    _missionSensor;
 #endif  // AMBASAT_MISSION_SENSOR
 
-    uint8_t _buffer[7];
+    uint8_t _buffer[SATELLITE_STATUS_BUFFER_SIZE];
     bool _sleeping;
      
     void sendSensorPayload(LoRaPayloadBase& sensor);
@@ -41,10 +42,27 @@ public:
     //
     // Methods for handling the "Statellite Status" payload
     virtual const uint8_t* getCurrentMeasurementBuffer(void);
-    virtual uint8_t getMeasurementBufferSize() const                    { return 7; }
+    virtual uint8_t getMeasurementBufferSize() const                    { return SATELLITE_STATUS_BUFFER_SIZE; }
     virtual uint8_t getPort() const                                     { return 1; }
 
     int16_t readVccMilliVolts(void) const;
+
+
+    // 
+    // Command Handling (if enabled)
+    //
+#ifdef ENABLE_AMBASAT_COMMANDS
+    void queueCommand(uint8_t port, uint8_t* recievedData, uint8_t recievedDataLen);
+    void processQueuedCommand(void);
+    virtual void handleCommand(uint8_t* recievedData, uint8_t recievedDataLen);
+
+private:
+    #define QUEUED_COMMAND_BUFFER_SIZE MAX_LEN_FRAME
+    uint8_t _queuedCommandPort;
+    uint8_t _queuedCommandDataBuffer[QUEUED_COMMAND_BUFFER_SIZE];
+    uint8_t _queuedCommandDataLength;
+#endif
+
 };
 
 #ifdef __cplusplus
