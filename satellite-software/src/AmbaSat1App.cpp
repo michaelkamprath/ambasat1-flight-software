@@ -189,18 +189,29 @@ void AmbaSat1App::loop()
 
 void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
 {
-    // wait for any in process transmission to end
-    if (LMIC.opmode & OP_TXRXPEND) {
-        PRINTLN_INFO(F("Current OP_TXRXPEND is running so skipping transmission"));
-        return;
+    // wait for any in process transmission to end. This really shouldn't happen, but can 
+    // if the prior transmission received an downlink requiring an ACK.
+    if ((LMIC.opmode&0x00FF) != OP_NONE) {
+        PRINTLN_INFO(F("  Waiting on prior transmission ..."));
+        while((LMIC.opmode&0x00FF) != OP_NONE) {
+            os_runloop_once();
+        }
+        PRINTLN_INFO(F("    Complete."));
+        // delay a little for radio to reset
+        delay(2000);
     }
 
     const uint8_t* data_ptr = sensor.getCurrentMeasurementBuffer();
 
     if (data_ptr == nullptr) {
-        PRINTLN_INFO(F("Sensor data is NULL."));
+        PRINTLN_INFO(F("  Sensor data is NULL."));
         return;
     }
+#if LOG_LEVEL >= LOG_LEVEL_INFO
+    PRINT_INFO(F("  Sending payload = "));
+    print_buffer(data_ptr, sensor.getMeasurementBufferSize());
+    Serial.flush();
+#endif  
 
     // LMIC seems to crash here if we previously just recieved a downlink AND
     // there are any pending data in the Serial queue. So flush the Serial queue.
@@ -217,15 +228,12 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
     // LMIC is a black box and 50 milliseconds isn't all that much, so just wait.
     delay(50);
 
-    while(!_sleeping) {
+    // Must wait for the TX operations of LMIC.opmode to go to zero in order to handle
+    // any downlink ACK that was requested. 
+    // TODO: determine the utility of the _sleeping variable given the forced wait until the radio is complete.
+    while((!_sleeping) || (LMIC.opmode&0x00FF) != OP_NONE) {
         os_runloop_once();
     }
-
-#if LOG_LEVEL >= LOG_LEVEL_INFO
-    PRINT_INFO(F("    Sending payload = "));
-    print_buffer(data_ptr, sensor.getMeasurementBufferSize());
-    Serial.flush();
-#endif  
 }
 
 #ifdef ENABLE_AMBASAT_COMMANDS
@@ -273,7 +281,7 @@ void AmbaSat1App::processQueuedCommand(void)
             _missionSensor.handleCommand(_queuedCommandDataBuffer, _queuedCommandDataLength);
             break;
         default:
-            PRINT_ERROR(F("ERROR - recieved cmd on port = "));
+            PRINT_ERROR(F("ERROR - received cmd on port = "));
             PRINT_ERROR(_queuedCommandPort);
             PRINT_ERROR(F("\n"));
             break;
@@ -285,7 +293,7 @@ void AmbaSat1App::processQueuedCommand(void)
 
 void AmbaSat1App::handleCommand(uint8_t* recievedData, uint8_t recievedDataLen)
 {
-    // Commands are idntified in the first byte. Commands that the satellite supports:
+    // Commands are identified in the first byte. Commands that the satellite supports:
     //
     //  0x01 - Blink LED. The secondle byte is is split into two nibbles. The upper nible represents the 
     //         number of times the LED should be blinked. The lower nibble indicates length of the blink 
@@ -293,7 +301,7 @@ void AmbaSat1App::handleCommand(uint8_t* recievedData, uint8_t recievedDataLen)
     //
 
     if (recievedDataLen == 0) {
-        PRINTLN_DEBUG(F("Recieved command with 0-length payload"));
+        PRINTLN_DEBUG(F("Received command with 0-length payload"));
         return;
     }
 
