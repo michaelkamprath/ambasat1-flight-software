@@ -54,8 +54,13 @@ public:
 #ifdef ENABLE_AMBASAT_COMMANDS
     void queueCommand(uint8_t port, uint8_t* recievedData, uint8_t recievedDataLen);
     void processQueuedCommand(void);
-    virtual void handleCommand(uint8_t* recievedData, uint8_t recievedDataLen);
+    virtual uint8_t handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen);
 
+    uint8_t executeBlinkCmd(uint8_t* recievedData, uint8_t recievedDataLen);
+    uint8_t executeUplinkPatternCmd(uint8_t* recievedData, uint8_t recievedDataLen);
+    uint8_t executeUplinkRateCmd(uint8_t* recievedData, uint8_t recievedDataLen);
+    uint8_t executeSetFrameCountCmd(uint8_t* recievedData, uint8_t recievedDataLen);
+    
 private:
     #define QUEUED_COMMAND_BUFFER_SIZE MAX_LEN_FRAME
     uint8_t _queuedCommandPort;

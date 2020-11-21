@@ -2,6 +2,13 @@
 #define __LoRaPayloadBase__
 #include <Arduino.h>
 
+#define PORT_CMD_STATUS             11
+
+#define CMD_STATUS_SUCCESS          0
+#define CMD_STATUS_UNIMPLEMENTED    0xFF
+#define CMD_STATUS_BAD_DATA_LEN     0x01
+#define CMD_STATUS_UNKNOWN_CMD      0x02
+
 // 
 // This class is really just an interface definition
 //
@@ -22,7 +29,7 @@ public:
 
 #ifdef ENABLE_AMBASAT_COMMANDS
     // handles a command payload. 
-    virtual void handleCommand(uint8_t* recievedData, uint8_t recievedDataLen)          { ; }
+    virtual uint8_t handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen)          { return CMD_STATUS_UNIMPLEMENTED; }
 
 #endif
 };

@@ -82,16 +82,65 @@ In normal operations, the AmbaSat is not intended to be regularly sent commands 
 
 The command will consist of at least 1 byte. This byte will be split into the high and low 4 bits. The high 4 bits will represent the actual command, and the low fit bits will represent the sensor ports the command pertains to, if relevant. As a result, there can only be 16 commands that the satellite will recognize, and there are only 15 sensor ports the satellite can support. A port value of 0 for a command indicates the command does not apply to a particular sensor. The command can have an optional second and third byte that will contain configuration data, depending on the command. 
 
-#### Set Sensor Telemetry Uplink Rate
-All sensors other than Voltage Level shall have the ability to alter the rate at which their telemetry is gathered and transmitted. In one extreme, the sensor's telemetry rate can be set to zero, which should be treated as equivalent to turning off the sensor. This might be needed if the sensor is malfunctioning, or it is desired to simply spend the daily airtime budget that TTN imposes differently between the sensors.
+Downlinks will use the LoRaWAN channel to indicate how the command should be routed according the this mapping:
 
-This command will have a second byte that represents the minimum number of 8 second multiples that the satellite should sleep in between sending the indicated sensor's data payload. A value of `0x00` means to stop transmitting the indicated sensor's measurements altogether. 
+| Channel | Command Type | Description |
+|:--|:--|:--|
+| 2 | Satellite | Commands that pertain to the basic operation of the AmbaSat-1 |
+| 3 | LSM9DS1 | Commands that pertain to the onboard LSM9DS1 gyro sensor |
+| 4 | Mission Sensor | Commands that pertain to the installed mission sesnor |
 
-#### Reset Uplink Frame Count
+The general format of the command downlink is:
 
-#### Reset Downlink Frame Count
+| Struct Member | Name | Description |
+|:--|:--|:--|
+| `uint16_t` | Command Sequence ID | This is a user defined ID for the command being sent. It will be used to identify this command in any response the satellite provides. |
+| `uint8_t` | Command ID | A number that indicates what command is being sent. The intertpretation of this command ID is contextual to the command chanel being used. |
+| `uint8_t*` | Command Data | An arbitrary length of 0 or more bytes containing data specific to the command being sent. The size of format of this data blob is defined by the command sent. |
 
-#### Sensor Configuration Adjustment
+#### Satellite Commands
+
+##### Blink LED
+Because the aliens in space like blinking lights too. This command causes the LED installed on the AmbaSat-1 to blink.
+
+* **Command ID**  : `0x01` 
+* **Command Data** : A single byte is used for the blink command data. 
+  * The most signficant 2 bits are used to indicate the blink duration as follows:
+     *  `00` = 0.1 second blinks
+     *  `01` = 0.5 second blinks
+     *  `10` = 1 second blinks
+     *  `11` = 2 second blinks
+  *  The least signficant 6 bits are used to indicate the number of blinks to make. 
+ 
+For example, the hex value of 0x84 would cause 4 blinks each 1 second long.
+
+##### Set Sensor Telemetry Uplink Pattern
+Changes the uplink pattern that the AmbaSat uses. An uplink pattern indicates what the AmbaSat will transmit each time it starts a transmission seqeunce.
+
+* **Command ID**  : `0x02` 
+* **Command Data** : A single byte is used to indicate which pattern to use:
+  * `0x00` - All data payloads will be transmitted sequentially with this pattern: Satellite, LSM9DS1, Mission Sensor
+  * `0x01` - All data payloads will be trasmitted sequentially, but each uplink sequence will start with a different data payload. This pattern attempts to mitigate the satellite getting short periods of power, not long enough to transmit all payloads. 
+  * `0x02` - Only a single data payload will be transmitted during each uplink sequence, rotating through the payloads type with each uplink.
+  * `0x03` - Satellite + 1 data payloads will be transmitted during each uplink sequence. The second payload in addtion to the satellite payload will alternate between the LSM9DS1 and the mission sensor payloads.
+
+##### Set Sensor Telemetry Uplink Rate
+Changes the amount of time in between the telemetry uplink transmissions. During the time in between uplinks tranmissions, the AmbaSat-1 will go into low power mode. 
+
+* **Command ID**  : `0x03` 
+* **Command Data** : A single byte interpretted as a `uint8_t` value which represents the number of 8 second periods that the satellite should sleep in between uplink transmissions. 
+
+##### Set Uplink Frame Count
+The uplink frame count is used by The Things Network to validate the auntenticity of an uplink and in turn process it. In this frame count should get out of sync, typically due to failed transmissions, resetting the uplink frame count might help. Note that this command is only useful if you have configured The Things Network to enforce frame counters. 
+
+**IMPORTANT**: This is a risky command. Setting an incorrect value could cause The Things Network to ignore uplinks from the AmbaSat. Use with care.
+
+* **Command ID**  : `0x04` 
+* **Command Data** : Two bytes internpreted as a `int16_t` in big endian order. This is the uplink frame count that should be set. 
+
+#### LSM9DS1 Commands
+
+#### Mission Sensor Commands
 
 ##### Sensor 3 - BME680
 The following variables will be able to be configured for the BME680 sensor:
@@ -109,9 +158,6 @@ The following variables will be able to be configured for the Si1132 sensor:
 * **Infrared ADC Gain** - This sets the ADC integration time for infrared light measurements
 * **Visible High Signal Range** - A boolean value indicating whether the visible light in a "high signal" environment. This should be set to `true` when operating in direct sunlight.
 * **Infrared High Signal Range** - A boolean value indicating whether the infrared light in a "high signal" environment. This should be set to `true` when operating in direct sunlight.
-
-#### Blink LED
-Because the aliens in space like blinking lights too. The command sensor port indicator is ignored, and a second byte is used to indicate the number of times the LED should be blinked. 
 
 ## Design Issues
 

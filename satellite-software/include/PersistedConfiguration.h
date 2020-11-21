@@ -6,6 +6,12 @@
 // Configuration ENUMs
 //
 
+typedef enum {
+    SATTELITE_PAYLOAD = 0,
+    LSM9DS1_PAYLOAD = 1,
+    MISSION_SENSOR_PAYLOAD = 2
+} UplinkPayloadType;
+
 //
 // Sensor Configuration Interface
 //
@@ -44,19 +50,9 @@ private:
     //
     uint32_t _rebootCount;
     uint32_t _uplinkFrameCount;
-
-    //
-    // Mission Sensor Configuration
-    //
-#if AMBASAT_MISSION_SENSOR == SENSOR_BME680
-
-#elif AMBASAT_MISSION_SENSOR == SENSOR_SI1132
-    uint8_t _adcGainVisible;
-    uint8_t _adcGainInfraRed;
-    bool _highSignalVisible;
-    bool _highSignalInfraRed;
-#endif //AMBASAT_MISSION_SENSOR
-
+    uint8_t _uplinkPattern;
+    UplinkPayloadType _lastPayloadUplinked;
+    uint8_t _uplinkRateValue;
 
     uint8_t configBlockSize(void) const;
 
@@ -80,34 +76,19 @@ public:
     // config items
     //
 
-    uint32_t getRebootCount(void) const           { return _rebootCount; }
+    uint32_t getRebootCount(void) const                     { return _rebootCount; }
 
-    uint32_t getUplinkFrameCount(void) const      { return _uplinkFrameCount; }
-    void setUplinkFrameCount(uint32_t frameCount, bool updateCRC = true);   
+    uint32_t getUplinkFrameCount(void) const                { return _uplinkFrameCount; }
+    void setUplinkFrameCount(uint32_t frameCount, bool updateCRC = true);
     
+    uint8_t getUplinkPattern(void) const                    { return _uplinkPattern; }
+    void setUplinkPattern(uint8_t pattern, bool updateCRC = true);
 
+    UplinkPayloadType getLastPayloadUplinked(void) const    { return _lastPayloadUplinked; }
+    void setLastPayloadUplinked(UplinkPayloadType payload, bool updateCRC = true);
 
-    //
-    // Mission Sensor
-    //
-
-#if AMBASAT_MISSION_SENSOR == SENSOR_BME680
-
-#elif AMBASAT_MISSION_SENSOR == SENSOR_SI1132
-    // Si1132
-    uint8_t getVisibleADCGain(void) const                                           { return _adcGainVisible; }
-    void setVisibleADCGain(uint8_t setting, bool updateCRC = true);
-
-    uint8_t getInfraRedADCGain(void) const                                          { return _adcGainInfraRed; }
-    void setInfraRedADCGain(uint8_t setting, bool updateCRC = true);
-
-    bool isVisibleHighSignalRange(void) const                                       { return _highSignalVisible; }
-    void setIsVisibleHighSignalRange(bool setting, bool updateCRC = true);
-
-    bool isInfraRedHighSignalRange(void) const                                      { return _highSignalInfraRed; }
-    void setIsInfraRedHighSignalRange(bool setting, bool updateCRC = true);
-
-#endif
+    uint8_t getUplinkSleepCycles(void) const                { return _uplinkRateValue; }
+    void setUplinkSleepCycles(uint8_t rateValue, bool updateCRC = true);   
 };
 
 

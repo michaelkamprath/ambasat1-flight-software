@@ -14,6 +14,20 @@ void hton_int16(int16_t x, uint8_t* val_buffer )
 #endif
 }
 
+int16_t ntoh_int16(uint8_t* val_buffer )
+{
+    int16_t value;
+
+#if BYTE_ORDER == LITTLE_ENDIAN
+    ((uint8_t*)&value)[0] = val_buffer[1];
+    ((uint8_t*)&value)[1] = val_buffer[0];
+#else
+    ((uint8_t*)&value)[0] = val_buffer[0];
+    ((uint8_t*)&value)[1] = val_buffer[1];
+#endif
+    return value;
+}
+
 void hton_int32(int32_t x, uint8_t* val_buffer )
 {
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -29,6 +43,24 @@ void hton_int32(int32_t x, uint8_t* val_buffer )
     val_buffer[2] = s[2];
     val_buffer[3] = s[3];
 #endif
+}
+
+int32_t ntoh_int32(uint8_t* val_buffer)
+{
+    int32_t value;
+#if BYTE_ORDER == LITTLE_ENDIAN
+    ((uint8_t*)&value)[0] = val_buffer[3];
+    ((uint8_t*)&value)[1] = val_buffer[2];
+    ((uint8_t*)&value)[2] = val_buffer[1];
+    ((uint8_t*)&value)[3] = val_buffer[0];
+#else
+    ((uint8_t*)&value)[0] = val_buffer[0];
+    ((uint8_t*)&value)[1] = val_buffer[1];
+    ((uint8_t*)&value)[2] = val_buffer[2];
+    ((uint8_t*)&value)[3] = val_buffer[3];
+
+#endif
+    return value;
 }
 
 void print_buffer( const uint8_t* buffer, uint8_t bufffer_size)

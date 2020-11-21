@@ -10,7 +10,6 @@
 //
 
 #define LED_PIN 9
-#define SLEEPCYCLES 75
 
 // Pin mapping
 const lmic_pinmap lmic_pins = {
@@ -171,17 +170,13 @@ void AmbaSat1App::loop()
     // number of time we write to EEPROM.
     //
     _config.setUplinkFrameCount(LMIC.seqnoUp);
-
-    #ifdef ENABLE_AMBASAT_COMMANDS
-    // handle any command that got queued
-    processQueuedCommand();
-    #endif
+    _config.setUplinkPattern(MISSION_SENSOR_PAYLOAD);
 
     // flush serial before going to sleep
     Serial.flush();
 
     // sleep device for designated sleep cycles
-    for (int i=0; i < SLEEPCYCLES; i++)
+    for (int i=0; i < _config.getUplinkSleepCycles(); i++)
     {
         LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);    //sleep 8 seconds * sleepcycles
     }   
@@ -234,6 +229,11 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
     while((!_sleeping) || (LMIC.opmode&0x00FF) != OP_NONE) {
         os_runloop_once();
     }
+
+    #ifdef ENABLE_AMBASAT_COMMANDS
+    // handle any command that got queued
+    processQueuedCommand();
+    #endif
 }
 
 #ifdef ENABLE_AMBASAT_COMMANDS
@@ -270,15 +270,29 @@ void AmbaSat1App::processQueuedCommand(void)
     //      port 2 = satellite commands
     //      port 3 = LSM9DS1 commands
     //      port 4 = Mission sensor comands
+
+    // The command payload is:
+    //      uint16_t - command sequence ID: ground software uses this value to identify the command sent
+    //      uint8_t  - command: the command ID, to be interpreted by the command handler.
+    //      uint8_t* - comannd data: a variable length of data that provides parameters to the command.
+    //                 The size of this data blob is determined by the command.
+    //
+
+    uint16_t cmdSeuqenceID = (uint16_t)ntoh_int16(&_queuedCommandDataBuffer[0]);
+    uint8_t cmd = _queuedCommandDataBuffer[2];
+    uint8_t* cmdData = _queuedCommandDataLength > 3 ? &_queuedCommandDataBuffer[3] : nullptr;
+    uint8_t cmdDataSize = _queuedCommandDataLength >= 3 ? (_queuedCommandDataLength-3) : 0;
+
+    uint8_t status = CMD_STATUS_UNIMPLEMENTED;
     switch (_queuedCommandPort) {
         case 2:
-            this->handleCommand(_queuedCommandDataBuffer, _queuedCommandDataLength);
+            status = this->handleCommand(cmdSeuqenceID, cmd, cmdData, cmdDataSize);
             break;
         case 3:
-            _lsm9DS1Sensor.handleCommand(_queuedCommandDataBuffer, _queuedCommandDataLength);
+            status = _lsm9DS1Sensor.handleCommand(cmdSeuqenceID, cmd, cmdData, cmdDataSize);
             break;
         case 4:
-            _missionSensor.handleCommand(_queuedCommandDataBuffer, _queuedCommandDataLength);
+            status = _missionSensor.handleCommand(cmdSeuqenceID, cmd, cmdData, cmdDataSize);
             break;
         default:
             PRINT_ERROR(F("ERROR - received cmd on port = "));
@@ -289,9 +303,43 @@ void AmbaSat1App::processQueuedCommand(void)
 
     // reset port back to no command
     _queuedCommandPort = 0xFF;
+
+    // responde with command status
+    uint8_t replyBuffer[3];
+    hton_int16(cmdSeuqenceID, &replyBuffer[0]);
+    replyBuffer[2] = status;
+
+#if LOG_LEVEL >= LOG_LEVEL_INFO
+    PRINT_INFO(F("  Sending command response payload = "));
+    print_buffer(replyBuffer, 3);
+#endif 
+
+    // LMIC seems to crash here if we previously just recieved a downlink AND
+    // there are any pending data in the Serial queue. So flush the Serial queue.
+    Serial.flush();
+
+    _sleeping = false;
+    LMIC_setTxData2(
+        PORT_CMD_STATUS,
+        (xref2u1_t)replyBuffer,
+        3,
+        0
+    ); 
+  
+    // Again, LMIC seems to flake out after recived downlinks without this delay. 
+    // Seems to be some interaction with the serial prints that follow. Since 
+    // LMIC is a black box and 50 milliseconds isn't all that much, so just wait.
+    delay(50);
+
+    // Must wait for the TX operations of LMIC.opmode to go to zero in order to handle
+    // any downlink ACK that was requested. 
+    // TODO: determine the utility of the _sleeping variable given the forced wait until the radio is complete.
+    while((!_sleeping) || (LMIC.opmode&0x00FF) != OP_NONE) {
+        os_runloop_once();
+    }
 }
 
-void AmbaSat1App::handleCommand(uint8_t* recievedData, uint8_t recievedDataLen)
+uint8_t AmbaSat1App::handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen)
 {
     // Commands are identified in the first byte. Commands that the satellite supports:
     //
@@ -304,54 +352,106 @@ void AmbaSat1App::handleCommand(uint8_t* recievedData, uint8_t recievedDataLen)
     //         The lower 6 bits are used to indicate the number of blinks.
     //
 
-    if (recievedDataLen == 0) {
-        PRINTLN_DEBUG(F("Received command with 0-length payload"));
-        return;
+    if (command == 0x01) {
+        return executeBlinkCmd(recievedData, recievedDataLen);
+    } else if (command == 0x02) {
+        return executeUplinkPatternCmd(recievedData, recievedDataLen);
+    } else if (command == 0x03) {
+        return executeUplinkRateCmd(recievedData, recievedDataLen);
+    } else if (command == 0x04) {
+        return executeSetFrameCountCmd(recievedData, recievedDataLen);
     }
 
-    uint8_t command = recievedData[0];
+    return CMD_STATUS_UNKNOWN_CMD;
+}
 
-    if (command == 0x01) {
-        // blink
-        if (recievedDataLen == 2 ) {
-            uint8_t blinkCount = (recievedData[1]&0x3F);
-            uint16_t blinkDurationMillis = 100;
-            switch (recievedData[1]&0xC0) {
-                default:
-                case 0x00:
-                    blinkDurationMillis = 100;
-                    break;
-                case 0x40:
-                    blinkDurationMillis = 500;
-                    break;                   
-                case 0x80:
-                    blinkDurationMillis = 1000;
-                    break;                   
-                case 0xC0:
-                    blinkDurationMillis = 2000;
-                    break;                   
-            }
-            PRINT_DEBUG(F("  blink command. count = "));
-            PRINT_DEBUG(blinkCount);
-            PRINT_DEBUG(F(", duration = "));
-            PRINT_DEBUG(blinkDurationMillis);   
-            PRINT_DEBUG(F(" ms\n"));
+uint8_t AmbaSat1App::executeBlinkCmd(uint8_t* recievedData, uint8_t recievedDataLen) 
+{
+    if (recievedDataLen != 1 ) {
+        return CMD_STATUS_BAD_DATA_LEN;
+    }
 
-            for (int16_t i = 0; i <blinkCount; i++) {
-                digitalWrite(LED_PIN, HIGH);
-                delay(blinkDurationMillis);
-                digitalWrite(LED_PIN, LOW);
-                if (i < blinkCount-1) {
-                    delay(blinkDurationMillis);
-                }
-            }
-        } else {
-            PRINT_DEBUG(F("   ERROR - blink command. dataLen = "));
-            PRINT_DEBUG(recievedDataLen);
-            PRINT_DEBUG(F("\n"));
+    uint8_t blinkCount = recievedData[0]&0x3F;
+    uint16_t blinkDurationMillis = 100;
+    switch (recievedData[0]&0xC0) {
+        default:
+        case 0x00:
+            blinkDurationMillis = 100;
+            break;
+        case 0x40:
+            blinkDurationMillis = 500;
+            break;                   
+        case 0x80:
+            blinkDurationMillis = 1000;
+            break;                   
+        case 0xC0:
+            blinkDurationMillis = 2000;
+            break;                   
+    }
+    PRINT_DEBUG(F("  blink command. count = "));
+    PRINT_DEBUG(blinkCount);
+    PRINT_DEBUG(F(", duration = "));
+    PRINT_DEBUG(blinkDurationMillis);   
+    PRINT_DEBUG(F(" ms\n"));
+
+    for (int16_t i = 0; i <blinkCount; i++) {
+        digitalWrite(LED_PIN, HIGH);
+        delay(blinkDurationMillis);
+        digitalWrite(LED_PIN, LOW);
+        if (i < blinkCount-1) {
+            delay(blinkDurationMillis);
         }
     }
+    delay(100);
+    return CMD_STATUS_SUCCESS;   
 }
+
+uint8_t AmbaSat1App::executeUplinkPatternCmd(uint8_t* recievedData, uint8_t recievedDataLen)
+{
+    if (recievedDataLen != 1 ) {
+        return CMD_STATUS_BAD_DATA_LEN;
+    }
+    UplinkPayloadType pattern = static_cast<UplinkPayloadType>(recievedData[0]);
+    _config.setUplinkPattern(pattern, true);
+
+    PRINT_DEBUG(F("  set the uplink pattern to "));
+    PRINT_DEBUG(pattern);
+    PRINT_DEBUG(F("\n"));
+    return CMD_STATUS_UNIMPLEMENTED;
+}
+
+uint8_t AmbaSat1App::executeUplinkRateCmd(uint8_t* recievedData, uint8_t recievedDataLen)
+{
+    if (recievedDataLen != 1 ) {
+        return CMD_STATUS_BAD_DATA_LEN;
+    }
+
+    uint8_t rateValue = recievedData[0];
+    _config.setUplinkSleepCycles(rateValue, true);
+    PRINT_DEBUG(F("  set the uplink rate to "));
+    PRINT_DEBUG(rateValue);
+    PRINT_DEBUG(F(" sleep cycles\n"));
+    return CMD_STATUS_SUCCESS;
+}
+
+uint8_t AmbaSat1App::executeSetFrameCountCmd(uint8_t* recievedData, uint8_t recievedDataLen)
+{
+    if (recievedDataLen != 2 ) {
+        return CMD_STATUS_BAD_DATA_LEN;
+    }
+
+    uint16_t frameCount = (uint16_t)ntoh_int16(recievedData);
+    _config.setUplinkFrameCount(frameCount, true);
+    LMIC.seqnoUp = frameCount;
+
+    PRINT_DEBUG(F("  reset the uplink frame count to "));
+    PRINT_DEBUG(frameCount);
+    PRINT_DEBUG(F("\n"));
+
+    return CMD_STATUS_SUCCESS;
+}
+
+
 #endif
 // initial job
 static osjob_t initjob;

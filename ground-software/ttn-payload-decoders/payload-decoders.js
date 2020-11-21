@@ -314,6 +314,40 @@ function DecodeSI1132Sensor(bytes) {
 	};
 }
 
+function DecodeCommandStatusResponse(bytes) {
+	if (bytes.length !== 3) {
+		return {
+			error: "payload length is not correct size",
+			port: port,
+			length: bytes.length 
+		};
+	}
+	var status_name = "";
+	switch (bytes[2]) {
+		case 0:
+			status_name = "Success";
+			break;
+		case 1:
+			status_name = "Bad Data Length";
+			break;			
+		case 2:
+			status_name = "Unknown Command";
+			break;
+		case 255:
+			status_name = "Unimplemented Command";
+			break;
+		default:
+			status_name = "Unknown Command Status Value";
+			break;
+	}
+
+	return {
+		command_sequence_id: bytes[0]*256 + bytes[1],
+		cmd_status: bytes[2],
+		description: status_name
+	};
+}
+
 function Decoder(bytes, port) {
 	if (port === 1) {
 		return DecodeSatelliteStatus(bytes);
@@ -327,6 +361,8 @@ function Decoder(bytes, port) {
 		return DecodeBME680Sensor(bytes);
 	} else if (port === 8 ) {
 		return DecodeSI1132Sensor(bytes);
+	} else if (port === 11 ) {
+		return DecodeCommandStatusResponse(bytes);
 	} else if (port === 0) {
 		//nothing
 		return {};
