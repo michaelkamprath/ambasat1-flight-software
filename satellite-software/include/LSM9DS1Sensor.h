@@ -6,8 +6,8 @@
 //
 // LSM9DS1 Sensor
 //
-#define LSM9DS1_ADDRESS            0x6b
-
+#define LSM9DS1_ADDRESS                 0x6b
+#define LSM9DS1_RESULTS_BUFFER_SIZE     20
 
 //
 // Configuration ENUMs
@@ -42,7 +42,7 @@ typedef enum {
 class LSM9DS1Sensor : public SensorBase {
 
 private:
-    uint8_t _buffer[20];
+    uint8_t _buffer[LSM9DS1_RESULTS_BUFFER_SIZE];
     bool _continuousMode;
 
     AccelerationSensitivitySetting _accelSensitivity;
@@ -57,7 +57,6 @@ private:
     void setMagnetFS(MagneticSensitivitySetting config);
     
     void setSensorConfig(void);
-    void setSensorValueAtBufferLocation(float sensor_value, uint8_t index);
 protected:
     virtual uint8_t i2cAutoIncrementBit(void) const         { return 7; }
 
@@ -72,7 +71,7 @@ public:
     virtual void setup(void)                                    { this->setSensorConfig(); }
     virtual bool isActive(void) const;
     virtual const uint8_t* getCurrentMeasurementBuffer(void);
-    virtual uint8_t getMeasurementBufferSize() const            { return 20; }
+    virtual uint8_t getMeasurementBufferSize() const            { return LSM9DS1_RESULTS_BUFFER_SIZE; }
     virtual uint8_t getPort() const                             { return 2; }
 
     //

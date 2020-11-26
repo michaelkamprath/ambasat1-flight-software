@@ -237,14 +237,6 @@ void LSM9DS1Sensor::setMagnetFS(MagneticSensitivitySetting config) // 0=400.0; 1
     writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M,range) ;
 }
 
-void LSM9DS1Sensor::setSensorValueAtBufferLocation(float sensor_value, uint8_t index)
-{
-    if (index < this->getMeasurementBufferSize()) {
-        int16_t int_value = sensor_value;
-        hton_int16(int_value, &_buffer[index]);
-    }
-}
-
 const uint8_t* 
 LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
 {
@@ -274,7 +266,7 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
         return nullptr;
     }
 
-    // Buffer format (TOTAL bytes = 21)
+    // Buffer format (TOTAL bytes = 20)
     //      type        value           buffer index
     //      ==============================================
     //      int16_t     accelData.x     0
@@ -294,15 +286,15 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
     // actually sourced from int16_t values. Converting back to int16_t should
     // have no data loss. 
 
-    setSensorValueAtBufferLocation(accelData[0], 0);
-    setSensorValueAtBufferLocation(accelData[1], 2);
-    setSensorValueAtBufferLocation(accelData[2], 4);
-    setSensorValueAtBufferLocation(gyroData[0], 6);
-    setSensorValueAtBufferLocation(gyroData[1], 8);
-    setSensorValueAtBufferLocation(gyroData[2], 10);
-    setSensorValueAtBufferLocation(magneticData[0], 12);
-    setSensorValueAtBufferLocation(magneticData[1], 14);
-    setSensorValueAtBufferLocation(magneticData[2], 16);
+    hton_int16(accelData[0], &_buffer[0]);
+    hton_int16(accelData[1], &_buffer[2]);
+    hton_int16(accelData[2], &_buffer[4]);
+    hton_int16(gyroData[0], &_buffer[6]);
+    hton_int16(gyroData[1], &_buffer[8]);
+    hton_int16(gyroData[2], &_buffer[10]);
+    hton_int16(magneticData[0], &_buffer[12]);
+    hton_int16(magneticData[0], &_buffer[14]);
+    hton_int16(magneticData[0], &_buffer[16]);
     _buffer[18] = (uint8_t)getAcceleratonSensitivitySetting();
     _buffer[18] |= (uint8_t)getGysroSensitivitySetting();
     _buffer[19] = (uint8_t)getMagneticSensitivitySetting();
