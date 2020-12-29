@@ -303,8 +303,8 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     PRINT_DEBUG(F("    calibrate temp = "));
     PRINT_DEBUG( temp_comp );
     PRINT_DEBUG(F(", normalize temp = "));
-    PRINT_DEBUG( (((float)temp_comp*9.0/5.0/100.0) + 32.0) );
-    PRINT_DEBUG(F(" °F, pressure = "));    
+    PRINT_DEBUG((float)temp_comp/100.0);
+    PRINT_DEBUG(F(" °C, pressure = "));    
     PRINT_DEBUG(press_comp);
     PRINT_DEBUG(F(", humidity = "));    
     PRINT_DEBUG(hum_comp);
