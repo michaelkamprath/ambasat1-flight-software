@@ -99,6 +99,7 @@ void AmbaSat1App::setup()
     LMIC_setSession (0x13, DEVADDR, nwkskey, appskey);
 
 #if defined(CFG_eu868)
+    PRINTLN_INFO(F("Transmitting using eu868 frequency plan"));
     // Set up the channels used by the Things Network, which corresponds
     // to the defaults of most gateways. Without this, only three base
     // channels from the LoRaWAN specification are used, which certainly
@@ -122,6 +123,7 @@ void AmbaSat1App::setup()
     // frequency and support for class B is spotty and untested, so this
     // frequency is not configured here.
 #elif defined(CFG_us915)
+    PRINTLN_INFO(F("Transmitting using us915 frequency plan"));
     // NA-US channels 0-71 are configured automatically
     // but only one group of 8 should (a subband) should be active
     // TTN recommends the second sub band, 1 in a zero based count.
