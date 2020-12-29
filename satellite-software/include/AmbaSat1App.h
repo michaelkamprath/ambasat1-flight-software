@@ -5,6 +5,7 @@
 #include "LoRaPayloadBase.h"
 #include "Sensors.h"
 #include "PersistedConfiguration.h"
+#include "LoggerSensor.h"
 
 #define SATELLITE_STATUS_BUFFER_SIZE 7
 //defines how many time intervals the satellite will wait between transmission
@@ -26,6 +27,10 @@ private:
 #elif AMBASAT_MISSION_SENSOR == SENSOR_BME680
     BME680Sensor    _missionSensor;
 #endif  // AMBASAT_MISSION_SENSOR
+
+    #ifdef ENABLE_LOGGER_SENSOR
+       LoggerSensor _loggerSensor;
+    #endif
 
     uint8_t _buffer[SATELLITE_STATUS_BUFFER_SIZE];
     bool _sleeping;

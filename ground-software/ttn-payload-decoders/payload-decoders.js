@@ -348,6 +348,13 @@ function DecodeCommandStatusResponse(bytes) {
 	};
 }
 
+function DecodeString(bytes) {
+	return {
+		message_length: bytes.length,
+		message: String.fromCharCode.apply(null, bytes)
+	};
+}
+
 function Decoder(bytes, port) {
 	if (port === 1) {
 		return DecodeSatelliteStatus(bytes);
@@ -363,6 +370,8 @@ function Decoder(bytes, port) {
 		return DecodeSI1132Sensor(bytes);
 	} else if (port === 11 ) {
 		return DecodeCommandStatusResponse(bytes);
+	} else if (port === 12 ) {
+		return DecodeString(bytes);
 	} else if (port === 0) {
 		//nothing
 		return {};

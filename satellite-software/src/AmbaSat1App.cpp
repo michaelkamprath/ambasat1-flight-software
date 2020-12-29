@@ -48,6 +48,10 @@ AmbaSat1App::AmbaSat1App()
         ,
         _queuedCommandPort(0xFF)
 #endif
+#ifdef ENABLE_LOGGER_SENSOR
+        ,
+        _loggerSensor(_config)
+#endif
 {
     if (AmbaSat1App::gApp != nullptr) {
         // complain loudly. Only one app object should be created.
@@ -155,6 +159,16 @@ void AmbaSat1App::loop()
     PRINTLN_INFO(F("Transmitting Satellite Status."));
     sendSensorPayload(*this);
     _sleeping = false;
+
+    #ifdef ENABLE_LOGGER_SENSOR
+        char message[255] = "Set your custom message here";
+        _loggerSensor.setlogMessage(message);
+        if (_loggerSensor.isActive()) {
+        PRINTLN_INFO(F("Transmitting logger sensor."));
+        sendSensorPayload(_loggerSensor);
+        _sleeping = false;
+    }
+    #endif
 
     if (_lsm9DS1Sensor.isActive()) {
         PRINTLN_INFO(F("Transmitting LSM9DS1 sensor."));
