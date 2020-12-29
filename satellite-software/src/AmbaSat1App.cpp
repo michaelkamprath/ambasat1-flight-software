@@ -75,6 +75,8 @@ void AmbaSat1App::setup()
     _lsm9DS1Sensor.setup();
     _missionSensor.setup();
 
+    _config.setUplinkSleepCycles(DEFAULT_RATE_VALUE, true);
+
     //
     // Set up LoRaWAN radio
     //
@@ -178,7 +180,7 @@ void AmbaSat1App::loop()
     // sleep device for designated sleep cycles
     for (int i=0; i < _config.getUplinkSleepCycles(); i++)
     {
-        LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);    //sleep 8 seconds * sleepcycles
+        LowPower.powerDown(TIME_INTERVAL, ADC_OFF, BOD_OFF);    //sleep TIME_INTERVAL seconds * sleepcycles
     }   
 }
 

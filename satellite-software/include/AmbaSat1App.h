@@ -7,6 +7,10 @@
 #include "PersistedConfiguration.h"
 
 #define SATELLITE_STATUS_BUFFER_SIZE 7
+//defines how many time intervals the satellite will wait between transmission
+#define DEFAULT_RATE_VALUE 30
+//define the single time interval duration
+#define TIME_INTERVAL SLEEP_1S
 
 class AmbaSat1App : public LoRaPayloadBase {
 private:
