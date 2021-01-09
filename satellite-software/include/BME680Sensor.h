@@ -107,6 +107,12 @@ public:
     int16_t getGasHeaterTemperature(uint8_t profile = 0) const                      { return _gasProfile0_targetTemp; }
     void setGasHeatTemperature(int16_t setting, uint8_t profile = 0);
 
+#ifdef ENABLE_AMBASAT_COMMANDS
+    // handles a command payload. 
+    virtual uint8_t handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen);
+
+#endif
+
 };
 
 #endif // __BME680Sensor__

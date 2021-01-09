@@ -8,6 +8,8 @@
 #define CMD_STATUS_UNIMPLEMENTED    0xFF
 #define CMD_STATUS_BAD_DATA_LEN     0x01
 #define CMD_STATUS_UNKNOWN_CMD      0x02
+#define CMD_STATUS_BAD_PARAM        0x03
+
 
 // 
 // This class is really just an interface definition

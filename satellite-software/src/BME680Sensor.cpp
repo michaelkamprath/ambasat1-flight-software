@@ -564,7 +564,7 @@ void BME680Sensor::setHumidityOversampling(BME680SensorOversamplingSetting setti
 void BME680Sensor::setPressureOversampling(BME680SensorOversamplingSetting setting)
 {
     eeprom_update_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_PRESSURE_OVERSAMPLING), setting);
-    _humidityOversampling = setting;
+    _pressureOversampling = setting;
 }
 
 void BME680Sensor::setIIRFilterCoef(BME680IIRFilterCoefSetting setting)
@@ -585,4 +585,80 @@ void BME680Sensor::setGasHeatTemperature(int16_t setting, uint8_t profile)
     // for now, profile is ignored
     eeprom_update_word((uint16_t *)(getEEPROMBaseAddress()+OFFSET_GAS_HEAT_TEMP), setting);
     _gasProfile0_targetTemp = setting;
+}
+
+uint8_t BME680Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen)
+{ 
+    if ((command >= 0x01)&&(command <= 0x03)) {
+        if (recievedDataLen != 1) {
+            return CMD_STATUS_BAD_DATA_LEN;
+        }
+        uint8_t value = (*recievedData)&0b00000111;
+        if (value > BME680_OVERSAMPLING_16x) {
+            value = BME680_OVERSAMPLING_16x;
+        }
+        BME680SensorOversamplingSetting oversampling = (BME680SensorOversamplingSetting)value;
+        if (command == 0x01) {
+            // Set Temperature Oversampling
+            PRINT_DEBUG(F("  Temp sampling = "));
+            PRINT_DEBUG(oversampling);
+            PRINT_DEBUG(F("\n"));
+            setTemperatureOversampling(oversampling);
+        } else if (command == 0x02) {
+            // Set Pressure Oversampling
+            PRINT_DEBUG(F("  Pressure sampling = "));
+            PRINT_DEBUG(oversampling);
+            PRINT_DEBUG(F("\n"));
+            setPressureOversampling(oversampling);
+        } else {
+            // Set Hummidity Oversampling
+            PRINT_DEBUG(F("  Humidity sampling = "));
+            PRINT_DEBUG(oversampling);
+            PRINT_DEBUG(F("\n"));
+            setHumidityOversampling(oversampling);
+        }
+    } else if (command == 0x04) {
+        // Set IIR Filter Coefficient
+        if (recievedDataLen != 1) {
+            return CMD_STATUS_BAD_DATA_LEN;
+        }
+        BME680IIRFilterCoefSetting coeff = (BME680IIRFilterCoefSetting)((*recievedData)&0b00000111);
+        PRINT_DEBUG(F("  IIR filter coef enum = "));
+        PRINT_DEBUG(coeff);
+        PRINT_DEBUG(F("\n"));
+        setIIRFilterCoef(coeff);
+    } else if (command == 0x05) {
+        // Set Gas Heater Heat Time
+        if (recievedDataLen != 2) {
+            return CMD_STATUS_BAD_DATA_LEN;
+        }        
+        int16_t millis = ntoh_int16(recievedData);
+        if ((millis < 1)  || (millis > 4032)) {
+            return CMD_STATUS_BAD_PARAM;
+        }
+        PRINT_DEBUG(F("  Gas heat time = "));
+        PRINT_DEBUG(millis);
+        PRINT_DEBUG(F(" ms\n"));
+        setGasHeatDuration(millis);
+    } else if (command == 0x06) {
+        // Set Gas Heater Heat Temperature
+        // TODO: convert this to a 1 byte parameter that indicates offset from 200
+        if (recievedDataLen != 2) {
+            return CMD_STATUS_BAD_DATA_LEN;
+        }        
+        int16_t plate_temp = ntoh_int16(recievedData);
+        if ((plate_temp < 200)  || (plate_temp > 400)) {
+            return CMD_STATUS_BAD_PARAM;
+        }
+        PRINT_DEBUG(F("  Gas heat temp = "));
+        PRINT_DEBUG(plate_temp);
+        PRINT_DEBUG(F("\n"));
+        setGasHeatTemperature(plate_temp);
+    }
+    else { 
+        return CMD_STATUS_UNKNOWN_CMD;
+    }
+
+    this->_config.updateCRC();
+    return CMD_STATUS_SUCCESS;
 }

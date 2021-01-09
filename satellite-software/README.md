@@ -51,11 +51,13 @@ Since AmbaSat only supports one sensor other than the LSM9DS1, clearly not all o
 
 ##### Satellite Status  Uplink Format
 The statellite status uplink will report the following attributes of the AmbaSat-1 picosat:
+
 1. **Reboot Count** - In order to get a sense of the frequency of reboots the AmbaSat-1 experiences due to the solar panels not facing sunlight, either due to orbiting to the night side of the earth or simply tumbling in space, a persisted `uint32_t` counter will be used to track the number of times the AmbaSat-1 powered up.
 2. **Voltage Level** - The voltage level that the ATMEGA328 is experiencing will be reported. This will be reported as millivolts using a `uint16_t`.
 3. **Sensor Status** - One `uint8_t` will be used to report the status of both the LSM9DS1 sensor and the mission sensor. The format of this by is documented below.
 
 The Sensor Status byte will have it's individual bits set as follows:
+
 | Bit | Description | Setting |
 |:-:|:--|:--|
 | 7 | Reserved | 0 |
@@ -78,7 +80,7 @@ The `CMD Status` Uplink will have the following format: **TBD**
 TBD
 
 ### Command Request Downlinks
-In normal operations, the AmbaSat is not intended to be regularly sent commands to change how it operates. However, the ability to alter operational parameters of the satellite will be enabled using the TTN downlink abilities. To enable command downlinks, the AmbaSat must use the hardware configuration that enables downlinks to be recieved (see Hardware Configuration above).
+In normal operations, the AmbaSat is not intended to be regularly sent commands to change how it operates. However, the ability to alter operational parameters of the satellite will be enabled using the TTN downlink abilities. To enable command downlinks, the AmbaSat must use the hardware configuration that enables downlinks to be received (see Hardware Configuration above).
 
 The command will consist of at least 1 byte. This byte will be split into the high and low 4 bits. The high 4 bits will represent the actual command, and the low fit bits will represent the sensor ports the command pertains to, if relevant. As a result, there can only be 16 commands that the satellite will recognize, and there are only 15 sensor ports the satellite can support. A port value of 0 for a command indicates the command does not apply to a particular sensor. The command can have an optional second and third byte that will contain configuration data, depending on the command. 
 
@@ -88,14 +90,14 @@ Downlinks will use the LoRaWAN channel to indicate how the command should be rou
 |:--|:--|:--|
 | 2 | Satellite | Commands that pertain to the basic operation of the AmbaSat-1 |
 | 3 | LSM9DS1 | Commands that pertain to the onboard LSM9DS1 gyro sensor |
-| 4 | Mission Sensor | Commands that pertain to the installed mission sesnor |
+| 4 | Mission Sensor | Commands that pertain to the installed mission sensor |
 
 The general format of the command downlink is:
 
 | Struct Member | Name | Description |
 |:--|:--|:--|
 | `uint16_t` | Command Sequence ID | This is a user defined ID for the command being sent. It will be used to identify this command in any response the satellite provides. |
-| `uint8_t` | Command ID | A number that indicates what command is being sent. The intertpretation of this command ID is contextual to the command chanel being used. |
+| `uint8_t` | Command ID | A number that indicates what command is being sent. The interpretation of this command ID is contextual to the command channel being used. |
 | `uint8_t*` | Command Data | An arbitrary length of 0 or more bytes containing data specific to the command being sent. The size of format of this data blob is defined by the command sent. |
 
 #### Satellite Commands
@@ -105,22 +107,22 @@ Because the aliens in space like blinking lights too. This command causes the LE
 
 * **Command ID**  : `0x01` 
 * **Command Data** : A single byte is used for the blink command data. 
-  * The most signficant 2 bits are used to indicate the blink duration as follows:
+  * The most significant 2 bits are used to indicate the blink duration as follows:
      *  `00` = 0.1 second blinks
      *  `01` = 0.5 second blinks
      *  `10` = 1 second blinks
      *  `11` = 2 second blinks
-  *  The least signficant 6 bits are used to indicate the number of blinks to make. 
+  *  The least significant 6 bits are used to indicate the number of blinks to make. 
  
 For example, the hex value of 0x84 would cause 4 blinks each 1 second long.
 
 ##### Set Sensor Telemetry Uplink Pattern
-Changes the uplink pattern that the AmbaSat uses. An uplink pattern indicates what the AmbaSat will transmit each time it starts a transmission seqeunce.
+Changes the uplink pattern that the AmbaSat uses. An uplink pattern indicates what the AmbaSat will transmit each time it starts a transmission sequence.
 
 * **Command ID**  : `0x02` 
 * **Command Data** : A single byte is used to indicate which pattern to use:
   * `0x00` - All data payloads will be transmitted sequentially with this pattern: Satellite, LSM9DS1, Mission Sensor
-  * `0x01` - All data payloads will be trasmitted sequentially, but each uplink sequence will start with a different data payload. This pattern attempts to mitigate the satellite getting short periods of power, not long enough to transmit all payloads. 
+  * `0x01` - All data payloads will be transmitted sequentially, but each uplink sequence will start with a different data payload. This pattern attempts to mitigate the satellite getting short periods of power, not long enough to transmit all payloads. 
   * `0x02` - Only a single data payload will be transmitted during each uplink sequence, rotating through the payloads type with each uplink.
   * `0x03` - Satellite + 1 data payloads will be transmitted during each uplink sequence. The second payload in addtion to the satellite payload will alternate between the LSM9DS1 and the mission sensor payloads.
 
@@ -128,15 +130,15 @@ Changes the uplink pattern that the AmbaSat uses. An uplink pattern indicates wh
 Changes the amount of time in between the telemetry uplink transmissions. During the time in between uplinks tranmissions, the AmbaSat-1 will go into low power mode. 
 
 * **Command ID**  : `0x03` 
-* **Command Data** : A single byte interpretted as a `uint8_t` value which represents the number of 8 second periods that the satellite should sleep in between uplink transmissions. 
+* **Command Data** : A single byte interpreted as a `uint8_t` value which represents the number of 8 second periods that the satellite should sleep in between uplink transmissions. 
 
 ##### Set Uplink Frame Count
-The uplink frame count is used by The Things Network to validate the auntenticity of an uplink and in turn process it. In this frame count should get out of sync, typically due to failed transmissions, resetting the uplink frame count might help. Note that this command is only useful if you have configured The Things Network to enforce frame counters. 
+The uplink frame count is used by The Things Network to validate the aunthenticity of an uplink and in turn process it. In this frame count should get out of sync, typically due to failed transmissions, resetting the uplink frame count might help. Note that this command is only useful if you have configured The Things Network to enforce frame counters. 
 
 **IMPORTANT**: This is a risky command. Setting an incorrect value could cause The Things Network to ignore uplinks from the AmbaSat. Use with care.
 
 * **Command ID**  : `0x04` 
-* **Command Data** : Two bytes internpreted as a `int16_t` in big endian order. This is the uplink frame count that should be set. 
+* **Command Data** : Two bytes interpreted as a `int16_t` in big endian order. This is the uplink frame count that should be set. 
 
 #### LSM9DS1 Commands
 
@@ -145,11 +147,15 @@ The uplink frame count is used by The Things Network to validate the auntenticit
 ##### Sensor 3 - BME680
 The following variables will be able to be configured for the BME680 sensor:
 
-* **Temperature Oversampling** - 
-* **Pressure Oversampling** -
-* **Humidity Oversampling** -
-* **IIR Filter Coefficient** -
-* **Configuration of each Gas Heater Profile** - Each gas heather profile consists of a target temperature and the amount of time (in milliseconds) that the heater will be held at that temperature before the gas resistance is measured. The BME680 can have up to 10 different gas heater profiles defined for measuring gas resistance. Currently this code only supports one profile (#0) being used.
+| Command Title | Command ID |Command Data | Default Value |
+|:--|:-:|:--|:-:|
+| Set Temperature Oversampling| `0x01` | One byte containing one of the following enumerations:<br><br>`0b000` - No oversampling<br>`0b001` - 1x oversampling<br>`0b010` - 2x oversampling<br>`0b011` - 4x oversampling<br>`0b100` - 8x oversampling<br>`0b101` - 16x oversampling | `0b100` |
+| Set Pressure Oversampling | `0x02` | One byte containing one of the following enumerations:<br><br>`0b000` - No oversampling<br>`0b001` - 1x oversampling<br>`0b010` - 2x oversampling<br>`0b011` - 4x oversampling<br>`0b100` - 8x oversampling<br>`0b101` - 16x oversampling | `0b100` |
+| Set Hummidity Oversampling | `0x03` | One byte containing one of the following enumerations:<br><br>`0b000` - No oversampling<br>`0b001` - 1x oversampling<br>`0b010` - 2x oversampling<br>`0b011` - 4x oversampling<br>`0b100` - 8x oversampling<br>`0b101` - 16x oversampling | `0b100` |
+| Set IIR Filter Coefficient | `0x04` | One byte containing one of the following enumerations:<br><br>`0b000` - coefficient value is 0<br>`0b001` - coefficient value is 1<br>`0b010` - coefficient value is 3<br>`0b011` - coefficient value is 7<br>`0b100` - coefficient value is 15<br>`0b101` - coefficient value is 31<br>`0b101` - coefficient value is 63<br>`0b101` - coefficient value is 127. | `0b010` |
+| Set Gas Heater Heat Time | `0x05` | A two byte `int16` value indicating the amount of time in milliseconds that should be used to heat the gas sensor hot plate. The valid range is between 1 and 4032 milliseconds. | 150 |
+| Set Gas Heater Heat Temperature | `0x06` | A two byte `int16` value indicating the temperature in Celsius that the gas sensor hot plate should be warmed to before making a measurement. The valid range is between 200 °C and 400 °C.  | 320 |
+
 
 ##### Sensor 6 - Si1132
 The following variables will be able to be configured for the Si1132 sensor:
@@ -170,11 +176,11 @@ As solar panels will be its only source of power, it is expected that the satell
 ### Flash Memory Usage
 In an effort to keep the code footprint small, the following actions are taken:
 * **Reducing the LMIC code footprint** - Since we are be using ABP activation, we don't need the LMIC code pertaining to OTAA. To effect this, the following compiler macros will be defined:
-** `DISABLE_JOIN`
-** `DISABLE_PING`
-** `DISABLE_BEACONS`
-** `DISABLE_MCMD_PING_SET`
-** `DISABLE_MCMD_BCNI_ANS`
+  * `DISABLE_JOIN`
+  * `DISABLE_PING`
+  * `DISABLE_BEACONS`
+  * `DISABLE_MCMD_PING_SET`
+  * `DISABLE_MCMD_BCNI_ANS`
 * **Wrap `Serial.print()` in a macro** - In order to remove serial prints that are only really intended for debugging, a macro should be used that will allow the print statements to be compiled out in the flight build.
 * **Unused sensor code not compiled** - Though this software is intended to be general purpose across all sensor types, only the configured sensor should compiled and linked when building. This will be accomplish through compiler macros.
 
