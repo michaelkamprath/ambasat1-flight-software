@@ -150,21 +150,57 @@ void AmbaSat1App::setup()
 
 void AmbaSat1App::loop() 
 {
-    PRINTLN_INFO(F("Transmitting Satellite Status."));
-    sendSensorPayload(*this);
-    _sleeping = false;
+    
+    uint8_t pattern = _config.getUplinkPattern();
+    uint8_t cycles = 3;
+    uint8_t system = 2;
 
-    if (_lsm9DS1Sensor.isActive()) {
-        PRINTLN_INFO(F("Transmitting LSM9DS1 sensor."));
-        sendSensorPayload(_lsm9DS1Sensor);
-        _sleeping = false;
+    switch(pattern){
+        case 0x01:
+        system = (uint8_t)_config.getLastPayloadUplinked();
+        if(system == 2) _config.setLastPayloadUplinked((UplinkPayloadType) 0);
+        else _config.setLastPayloadUplinked((UplinkPayloadType) (system+1));
+        break;
+        case 0x02:
+        system = (uint8_t)_config.getLastPayloadUplinked();
+        cycles = 1;
+        break;
+        case 0x03:
+        cycles = 1;
+        break;
     }
 
-    if (_missionSensor.isActive()) {
-        PRINTLN_INFO(F("Transmitting mission sensor"));
-        sendSensorPayload(_missionSensor);
-        _sleeping = false;
-    }
+    for(uint8_t i = 0; i < cycles; ++i){
+        if(system > 1) system = 0;
+        else ++system;
+
+        if(system == 0){
+            PRINTLN_INFO(F("Transmitting Satellite Status."));
+            sendSensorPayload(*this);
+            _sleeping = false;
+            if(pattern == 0x03){
+                if(_config.getLastPayloadUplinked() == LSM9DS1_PAYLOAD) system = 2;
+                else system = 1;
+            }
+        }
+        if (system == 1){
+            if (_lsm9DS1Sensor.isActive()) {
+                PRINTLN_INFO(F("Transmitting LSM9DS1 sensor."));
+                sendSensorPayload(_lsm9DS1Sensor);
+                _sleeping = false;
+            }
+        }
+        if(system == 2){
+            if (_missionSensor.isActive()) {
+                PRINTLN_INFO(F("Transmitting mission sensor"));
+                sendSensorPayload(_missionSensor);
+                _sleeping = false;
+            }
+        }
+        
+        if(pattern > 0x01) _config.setLastPayloadUplinked((UplinkPayloadType) system);        
+    } 
+    
     //
     // technically there is some risk that the satellite will loose power between
     // the first transmission above and the last one, and in such case we will not
@@ -172,7 +208,6 @@ void AmbaSat1App::loop()
     // number of time we write to EEPROM.
     //
     _config.setUplinkFrameCount(LMIC.seqnoUp);
-    _config.setUplinkPattern(MISSION_SENSOR_PAYLOAD);
 
     // flush serial before going to sleep
     Serial.flush();
@@ -419,7 +454,7 @@ uint8_t AmbaSat1App::executeUplinkPatternCmd(uint8_t* recievedData, uint8_t reci
     PRINT_DEBUG(F("  set the uplink pattern to "));
     PRINT_DEBUG(pattern);
     PRINT_DEBUG(F("\n"));
-    return CMD_STATUS_UNIMPLEMENTED;
+    return CMD_STATUS_SUCCESS;
 }
 
 uint8_t AmbaSat1App::executeUplinkRateCmd(uint8_t* recievedData, uint8_t recievedDataLen)

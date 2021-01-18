@@ -350,3 +350,45 @@ void LSM9DS1Sensor::setMagneticSensitivitySetting(MagneticSensitivitySetting set
     eeprom_update_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_MAGNETIC_SENSITIVITY), setting);
     _magneticSensitivity = setting;
 }
+
+uint8_t LSM9DS1Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen){
+    if(recievedDataLen != 1){
+        return CMD_STATUS_BAD_PARAM;
+    }
+    PRINT_DEBUG(F("Change LSM9DS1 settings"));
+    PRINT_DEBUG(F("\n"));
+    
+    switch(command){
+        case 0x00:
+        if(*recievedData > 0x04) return CMD_STATUS_BAD_PARAM;
+        PRINT_DEBUG(F("  Accel setting = "));
+        PRINT_DEBUG(*recievedData);
+        PRINT_DEBUG(F("\n"));
+        setAcceleratonSensitivitySetting((AccelerationSensitivitySetting) *recievedData);        
+        break;
+        case 0x01:
+        if(*recievedData != 0x00 && *recievedData != 0x10 && *recievedData != 0x20 && *recievedData != 0x40) return CMD_STATUS_BAD_PARAM;
+        PRINT_DEBUG(F("  Gyro setting = "));
+        PRINT_DEBUG(*recievedData);
+        PRINT_DEBUG(F("\n"));
+        setGysroSensitivitySetting((GyroSensitivitySetting)*recievedData);
+        break;
+        case 0x02:
+        if(*recievedData > 0x04) return CMD_STATUS_BAD_PARAM;
+        PRINT_DEBUG(F("  Magn setting = "));
+        PRINT_DEBUG(*recievedData);
+        PRINT_DEBUG(F("\n"));
+        setMagneticSensitivitySetting((MagneticSensitivitySetting) *recievedData);
+        break;
+        case 0x03:
+        PRINT_DEBUG(F("  Set defaults "));
+        PRINT_DEBUG(F("\n"));
+        setDefaultValues();
+        break;
+        default:
+        return CMD_STATUS_BAD_PARAM;
+    }
+    setSensorConfig(); //cement the changes.
+    this->_config.updateCRC();
+    return CMD_STATUS_SUCCESS;
+}
