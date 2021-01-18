@@ -5,6 +5,7 @@
 #define LOG_LEVEL_ERRORS  1
 #define LOG_LEVEL_INFO    2
 #define LOG_LEVEL_DEBUG   3
+#define LOG_LEVEL_DEBUG_ONLY   4
 
 #ifndef LOG_LEVEL
 #define LOG_LEVEL LOG_LEVEL_INFO
@@ -51,6 +52,18 @@
 #define PRINT_DEBUG(x)        
 #define PRINT_HEX_DEBUG(x)    
 #define PRINTLN_DEBUG(x)        
+#define PRINT_INFO(x)           
+#define PRINT_HEX_INFO(x)       
+#define PRINTLN_INFO(x)         
+#define PRINT_ERROR(x)          
+#define PRINT_HEX_ERROR(x)      
+#define PRINTLN_ERROR(x)        
+
+#elif LOG_LEVEL == LOG_LEVEL_DEBUG_ONLY
+
+#define PRINT_DEBUG(x)          Serial.print(x)
+#define PRINT_HEX_DEBUG(x)      Serial.print(x, HEX)
+#define PRINTLN_DEBUG(x)        Serial.println(x)
 #define PRINT_INFO(x)           
 #define PRINT_HEX_INFO(x)       
 #define PRINTLN_INFO(x)         

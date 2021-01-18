@@ -8,7 +8,7 @@ class PersistedConfiguration;
 //
 // BME680 Sensor
 //
-#define BME680_I2C_ADDRESS            0x76
+#define BME680_I2C_ADDRESS            0x77
 
 #define BME680_RESULTS_BUFFER_SIZE    18
 
@@ -61,6 +61,7 @@ private:
     int32_t calibratedPressureReading(uint8_t press_adc_msb, uint8_t press_adc_lsb, uint8_t press_adc_xlsb, int32_t t_fine);
     int32_t calibratedHumidityReading(uint8_t hum_adc_msb, uint8_t hum_adc_lsb, int32_t temp_comp);
     int32_t calibratedGasResistance(uint8_t gas_adc_msb, uint8_t gas_adc_lsb);
+    void setSensorConfig(void);
     
 protected:
     virtual uint8_t i2cAutoIncrementBit(void) const             { return 0; }

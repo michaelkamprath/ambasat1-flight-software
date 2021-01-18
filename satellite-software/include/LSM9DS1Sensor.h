@@ -91,6 +91,12 @@ public:
 
     MagneticSensitivitySetting getMagneticSensitivitySetting(void) const            { return _magneticSensitivity; }
     void setMagneticSensitivitySetting(MagneticSensitivitySetting setting);
+
+#ifdef ENABLE_AMBASAT_COMMANDS
+    // handles a command payload. 
+    virtual uint8_t handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen);
+
+#endif
 };
 
 #endif
