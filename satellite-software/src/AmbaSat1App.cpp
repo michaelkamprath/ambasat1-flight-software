@@ -155,42 +155,42 @@ void AmbaSat1App::loop()
     uint8_t cycles = 3;
     uint8_t system = 2;
 
-    switch(pattern){
+    switch (pattern) {
         case 0x01:
-        system = (uint8_t)_config.getLastPayloadUplinked();
-        if(system == 2) _config.setLastPayloadUplinked((UplinkPayloadType) 0);
-        else _config.setLastPayloadUplinked((UplinkPayloadType) (system+1));
-        break;
+            system = (uint8_t)_config.getLastPayloadUplinked();
+            if (system == 2) _config.setLastPayloadUplinked((UplinkPayloadType) 0);
+            else _config.setLastPayloadUplinked((UplinkPayloadType) (system+1));
+            break;
         case 0x02:
-        system = (uint8_t)_config.getLastPayloadUplinked();
-        cycles = 1;
-        break;
+            system = (uint8_t)_config.getLastPayloadUplinked();
+            cycles = 1;
+            break;
         case 0x03:
-        cycles = 1;
+            cycles = 1;
         break;
     }
 
-    for(uint8_t i = 0; i < cycles; ++i){
-        if(system > 1) system = 0;
+    for (uint8_t i = 0; i < cycles; ++i) {
+        if (system > 1) system = 0;
         else ++system;
 
-        if(system == 0){
+        if (system == 0) {
             PRINTLN_INFO(F("Transmitting Satellite Status."));
             sendSensorPayload(*this);
             _sleeping = false;
-            if(pattern == 0x03){
-                if(_config.getLastPayloadUplinked() == LSM9DS1_PAYLOAD) system = 2;
+            if (pattern == 0x03) {
+                if (_config.getLastPayloadUplinked() == LSM9DS1_PAYLOAD) system = 2;
                 else system = 1;
             }
         }
-        if (system == 1){
+        if (system == 1) {
             if (_lsm9DS1Sensor.isActive()) {
                 PRINTLN_INFO(F("Transmitting LSM9DS1 sensor."));
                 sendSensorPayload(_lsm9DS1Sensor);
                 _sleeping = false;
             }
         }
-        if(system == 2){
+        if (system == 2) {
             if (_missionSensor.isActive()) {
                 PRINTLN_INFO(F("Transmitting mission sensor"));
                 sendSensorPayload(_missionSensor);
@@ -198,7 +198,7 @@ void AmbaSat1App::loop()
             }
         }
         
-        if(pattern > 0x01) _config.setLastPayloadUplinked((UplinkPayloadType) system);        
+        if (pattern > 0x01) _config.setLastPayloadUplinked((UplinkPayloadType) system);        
     } 
     
     //

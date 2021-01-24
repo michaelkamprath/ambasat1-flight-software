@@ -591,6 +591,7 @@ void BME680Sensor::setGasHeatTemperature(int16_t setting, uint8_t profile)
     _gasProfile0_targetTemp = setting;
 }
 
+#ifdef ENABLE_AMBASAT_COMMANDS
 uint8_t BME680Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen)
 { 
     if ((command >= 0x01)&&(command <= 0x03)) {
@@ -658,16 +659,15 @@ uint8_t BME680Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, uin
         PRINT_DEBUG(plate_temp);
         PRINT_DEBUG(F("\n"));
         setGasHeatTemperature(plate_temp);
-    }else if (command == 0x07){
-        PRINT_DEBUG(F("  default "));
-        PRINT_DEBUG(F("\n"));
+    } else if (command == 0x07) {
+        PRINT_DEBUG(F("  default\n"));
         setDefaultValues();
     }
     else { 
         return CMD_STATUS_UNKNOWN_CMD;
     }
-
-    setSensorConfig();
     this->_config.updateCRC();
+    setSensorConfig();
     return CMD_STATUS_SUCCESS;
 }
+#endif
