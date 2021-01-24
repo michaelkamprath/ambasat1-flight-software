@@ -8,7 +8,7 @@ class PersistedConfiguration;
 //
 // BME680 Sensor
 //
-#define BME680_I2C_ADDRESS            0x77
+#define BME680_I2C_ADDRESS            0x76
 
 #define BME680_RESULTS_BUFFER_SIZE    18
 
