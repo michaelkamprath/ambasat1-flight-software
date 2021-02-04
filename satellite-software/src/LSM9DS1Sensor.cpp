@@ -46,10 +46,10 @@ LSM9DS1Sensor::LSM9DS1Sensor(PersistedConfiguration& config)
     // Try to initialise and warn if we couldn't detect the chip
     if (!begin())
     {
-        PRINTLN_ERROR(F("ERROR: unable to initialize the LSM9DS1."));
+        PRINTLN_ERROR(F("ERROR: unable to initialize LSM9DS1."));
         setIsFound(false);
     } else {
-        PRINTLN_INFO(F("Found LSM9DS1 9DOF"));
+        PRINTLN_INFO(F("Found LSM9DS1"));
         setIsFound(true);
     }
  }
@@ -356,26 +356,26 @@ uint8_t LSM9DS1Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, ui
     if (recievedDataLen != 1) {
         return CMD_STATUS_BAD_DATA_LEN;
     }
-    PRINT_DEBUG(F("Change LSM9DS1 settings\n"));
+    PRINT_DEBUG(F("Set LSM9DS1 config\n"));
     
     switch (command) {
         case 0x00:
             if (*recievedData > 0x04) return CMD_STATUS_BAD_PARAM;
-            PRINT_DEBUG(F("  Accel setting = "));
+            PRINT_DEBUG(F("  Accel = "));
             PRINT_DEBUG(*recievedData);
             PRINT_DEBUG(F("\n"));
             setAcceleratonSensitivitySetting((AccelerationSensitivitySetting) *recievedData);        
             break;
         case 0x01:
-            if ( (*recievedData)&0x8F != 0 ) return CMD_STATUS_BAD_PARAM;
-            PRINT_DEBUG(F("  Gyro setting = "));
+            if (((*recievedData)&0x8F) != 0 ) return CMD_STATUS_BAD_PARAM;
+            PRINT_DEBUG(F("  Gyro = "));
             PRINT_DEBUG(*recievedData);
             PRINT_DEBUG(F("\n"));
             setGysroSensitivitySetting((GyroSensitivitySetting)*recievedData);
             break;
         case 0x02:
             if (*recievedData > 0x04) return CMD_STATUS_BAD_PARAM;
-            PRINT_DEBUG(F("  Magn setting = "));
+            PRINT_DEBUG(F("  Magn = "));
             PRINT_DEBUG(*recievedData);
             PRINT_DEBUG(F("\n"));
             setMagneticSensitivitySetting((MagneticSensitivitySetting) *recievedData);

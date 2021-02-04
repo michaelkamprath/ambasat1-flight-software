@@ -58,7 +58,7 @@ BME680Sensor::BME680Sensor(PersistedConfiguration& config)
 {   
     if (!begin())
     {
-        PRINTLN_ERROR(F("ERROR: unable to init BME680"));
+        PRINTLN_ERROR(F("ERROR unable to init BME680"));
         setIsFound(false);
     } else {
         setIsFound(true);
@@ -78,7 +78,7 @@ bool BME680Sensor::begin(void)
         return false;
     }
     if (chip_id != 0x61) {
-        PRINT_ERROR(F("ERROR Found BME680 with wrong chip ID = 0x"));
+        PRINT_ERROR(F("ERROR Found BME680 with wrong chip ID"));
         return false;
     }
     PRINT_INFO(F("Found BME680 with chip ID = 0x"));
@@ -90,7 +90,7 @@ bool BME680Sensor::begin(void)
 void BME680Sensor::reset(void)
 {
     if (!writeRegister(BME680_RESET_REG, 0xB6)) {
-        PRINTLN_ERROR(F("ERROR unable to reset BME680"));
+        PRINTLN_ERROR(F("ERROR can't reset BME680"));
         return;
     }
     delay(10);
@@ -99,7 +99,7 @@ void BME680Sensor::reset(void)
 
 void BME680Sensor::setup(void)
 {
-    PRINTLN_DEBUG(F("Configuring BME680 sensor."));
+    PRINTLN_DEBUG(F("Configuring BME680"));
 
     setSensorConfig();
 
@@ -124,13 +124,13 @@ void BME680Sensor::setSensorConfig(void){
     // Select IIR filter for temperature sensor
     uint8_t iirCoef = (uint8_t)getIIRFilterCoef() << BME680_IIR_FILTER_COEF_SHIFT;
     if (!updateRegister(BME680_config_REG, BME680_IIR_FILTER_COEF_MASK, iirCoef)) {
-        PRINTLN_DEBUG(F("ERROR setting IIR coef"));
+        PRINTLN_DEBUG(F("ERROR setting IIR"));
         return;
     }
 
     // Define heater-on time
     if (!writeRegister(BME680_gas_wait_0_REG, calculateHeaterDuration(getGasHeatDuration()))) {
-        PRINTLN_DEBUG(F("ERROR setting heater duration"));
+        PRINTLN_DEBUG(F("ERROR setting heater time"));
         return;    
     }
 
@@ -164,11 +164,11 @@ bool BME680Sensor::updateTemperatureTargetResistance(int16_t target_temp, int16_
     // TODO read ambient temperature from sensor
     uint8_t res_heat_x;
     if (!calculateTemperatureTargetResistance(target_temp, amb_temp, res_heat_x)) {  // target 300 degrees
-        PRINTLN_DEBUG(F("ERROR calculating BME680 res_reat_x"));
+        PRINTLN_DEBUG(F("ERROR calculating res_reat_x"));
         return false;
     }
 
-    PRINT_DEBUG(F("    calculated res_heat_x = 0x"));
+    PRINT_DEBUG(F("    res_heat_x = 0x"));
     PRINT_HEX_DEBUG(res_heat_x);
     PRINT_DEBUG(F("\n"));
     writeRegister(BME680_res_heat_0_REG, res_heat_x);
@@ -227,7 +227,7 @@ void BME680Sensor::startMeasurementProcess(void)
     if (isActive()) {
         // Trigger forced mode measurement
         if (!updateRegister(BME680_ctrl_meas_REG, 0b00000011, 0x01)) { // forced mode
-            PRINTLN_ERROR(F("ERROR setting BME660 forced mode"));
+            PRINTLN_ERROR(F("ERROR starting BME660"));
             return;
         }
     }
@@ -260,7 +260,7 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
 
     bool isDone = ((reg_value&0b0010000) == 0);
     if (!isDone) {
-        PRINT_DEBUG(F("    waiting for BMR680 to complete measurement"));
+        PRINT_DEBUG(F("    waiting for BMR680"));
         while (!isDone) {
             PRINT_DEBUG(F("."));
             if (!readRegister(BME680_STATUS_REG, reg_value)) {
@@ -270,7 +270,7 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
             isDone = ((reg_value&0b0010000) == 0);
             delay(1);
         }
-        PRINTLN_DEBUG(F("\n    BME680 measurement is done.")); 
+        PRINTLN_DEBUG(F("\n    BME680 done.")); 
     }
 
     // get temp, pressure, and humidity ADC values. The buffer map is
@@ -317,7 +317,7 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     PRINT_DEBUG(press_comp);
     PRINT_DEBUG(F(", humidity = "));    
     PRINT_DEBUG(hum_comp);
-    PRINT_DEBUG(F(", gas resistance = "));    
+    PRINT_DEBUG(F(", gas ohms = "));    
     PRINT_DEBUG(gas_res);
     PRINT_DEBUG(F("\n")); 
 
@@ -478,15 +478,45 @@ int32_t BME680Sensor::calibratedHumidityReading(uint8_t hum_adc_msb, uint8_t hum
 
 int32_t BME680Sensor::calibratedGasResistance(uint8_t gas_adc_msb, uint8_t gas_adc_lsb)
 {
-    static const uint32_t const_array1_int[16] = { UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2147483647),
-		UINT32_C(2147483647), UINT32_C(2126008810), UINT32_C(2147483647), UINT32_C(2130303777),
-		UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2143188679), UINT32_C(2136746228),
-		UINT32_C(2147483647), UINT32_C(2126008810), UINT32_C(2147483647), UINT32_C(2147483647) };
+    //
+    // The following is a compression of the memory required to represent the 16 position array of 4-byte ints paramters
+    // required for the algorithm. This array has repeated values, so the compression is to have a array of the
+    // distinct values, then a 16 position array of 1 byte indexes into the distinct values. A compile macro 
+    // is used to easily handle the index dereferenceing.
+    //
+    // The original parameter array: 
+    // static const uint32_t const_array1_int[16] = { 
+    //      UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2147483647),
+	//      UINT32_C(2147483647), UINT32_C(2126008810), UINT32_C(2147483647), UINT32_C(2130303777),
+	//      UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2143188679), UINT32_C(2136746228),
+	//      UINT32_C(2147483647), UINT32_C(2126008810), UINT32_C(2147483647), UINT32_C(2147483647) 
+    // };
+    //
 
-    static const uint32_t const_array2_int[16] = { UINT32_C(4096000000), UINT32_C(2048000000), UINT32_C(1024000000), UINT32_C(512000000),
-		UINT32_C(255744255), UINT32_C(127110228), UINT32_C(64000000), UINT32_C(32258064), UINT32_C(16016016),
-		UINT32_C(8000000), UINT32_C(4000000), UINT32_C(2000000), UINT32_C(1000000), UINT32_C(500000),
-		UINT32_C(250000), UINT32_C(125000) };
+    static const uint32_t const_array1_int_values[5] = {
+        UINT32_C(2147483647),
+        UINT32_C(2126008810),
+        UINT32_C(2130303777),
+        UINT32_C(2143188679),
+        UINT32_C(2136746228),
+    };
+
+    static const uint8_t const_array1_int_indexes[16] = {
+        0, 0, 0, 0,
+        0, 1, 0, 2,
+        0, 0, 3, 4,
+        0, 1, 0, 0,
+    };
+
+    #define GET_const_array1_int(i) const_array1_int_values[const_array1_int_indexes[i]]
+
+    // this array doesn't have repeated values so not worth compressing
+    static const uint32_t const_array2_int[16] = { 
+        UINT32_C(4096000000), UINT32_C(2048000000), UINT32_C(1024000000), UINT32_C(512000000),
+		UINT32_C(255744255), UINT32_C(127110228), UINT32_C(64000000), UINT32_C(32258064), 
+        UINT32_C(16016016), UINT32_C(8000000), UINT32_C(4000000), UINT32_C(2000000),
+        UINT32_C(1000000), UINT32_C(500000), UINT32_C(250000), UINT32_C(125000) 
+    };
 
     int16_t gas_adc = (int16_t)(gas_adc_lsb/64) + (int16_t)gas_adc_msb*4;
     uint8_t gas_range = gas_adc_lsb&0b00001111;
@@ -497,7 +527,7 @@ int32_t BME680Sensor::calibratedGasResistance(uint8_t gas_adc_msb, uint8_t gas_a
     }
 
     // calculate
-    int64_t var1 = (int64_t)(((1340 + (5 * (int64_t)range_switching_error)) * ((int64_t)const_array1_int[gas_range])) >> 16);
+    int64_t var1 = (int64_t)(((1340 + (5 * (int64_t)range_switching_error)) * ((int64_t)GET_const_array1_int(gas_range))) >> 16);
     int64_t var2 = (int64_t)(gas_adc << 15) - (int64_t)((int64_t)1 << 24) + var1;
 
     int32_t gas_res = (int32_t)(( ((int64_t)(const_array2_int[gas_range] * (int64_t)var1) >> 9) + (var2 >> 1)) / var2);
@@ -628,7 +658,7 @@ uint8_t BME680Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, uin
             return CMD_STATUS_BAD_DATA_LEN;
         }
         BME680IIRFilterCoefSetting coeff = (BME680IIRFilterCoefSetting)((*recievedData)&0b00000111);
-        PRINT_DEBUG(F("  IIR filter set = "));
+        PRINT_DEBUG(F("  IIR set = "));
         PRINT_DEBUG(coeff);
         PRINT_DEBUG(F("\n"));
         setIIRFilterCoef(coeff);

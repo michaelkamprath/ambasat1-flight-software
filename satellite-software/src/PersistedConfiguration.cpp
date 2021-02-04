@@ -31,7 +31,7 @@ void SensorConfigurationDelegate::setBaseEEPROMAddress(uint16_t address)
 {
     // it's a programming error to call this more than once
     if (_baseEEPROMAddress != 0xFFFF) {
-        PRINTLN_DEBUG(F("ERROR - called setBaseEEPROMAddress multiple times"));
+        PRINTLN_DEBUG(F("ERROR multiple setBaseEEPROMAddress"));
         return;
     }
     _baseEEPROMAddress = address;
@@ -68,12 +68,12 @@ void PersistedConfiguration::setSensorConfigDelegates(SensorConfigurationDelegat
     if (_LSM9DS1Delegate == nullptr) {
         _LSM9DS1Delegate = LSM9DS1Delegate;
     } else {
-        PRINTLN_DEBUG(F("ERROR - callerd setLSM9DS1ConfigDelegate multiple times"));
+        PRINTLN_DEBUG(F("ERROR multiple setLSM9DS1ConfigDelegate"));
     }
     if (_missionSensorDelegate == nullptr) {
         _missionSensorDelegate = missionSensorDelegate;
     } else {
-        PRINTLN_DEBUG(F("ERROR - callerd setMissionSensorConfigDelegate multiple times"));
+        PRINTLN_DEBUG(F("ERROR multiple setMissionSensorConfigDelegate"));
     }
 
     // now set eeprom base addresses
@@ -127,7 +127,7 @@ bool PersistedConfiguration::isEEPROMErased(void) const
 
 void PersistedConfiguration::resetToDefaults(void)
 {
-    PRINTLN_DEBUG(F("Setting device configuration to default values."));
+    PRINTLN_DEBUG(F("Setting default device configuration"));
 
     setRebootCount(0, false);
     setUplinkFrameCount(0, false);
@@ -159,11 +159,11 @@ void PersistedConfiguration::loadAllCongigurations(void)
     _missionSensorDelegate->loadConfigValues();
 
     if (checkCRC()) {
-        PRINT_DEBUG(F("  Loaded configuration with:\n    reboot count = "));
+        PRINT_DEBUG(F("  Loaded configuration with:\n    reboot count: "));
         PRINT_DEBUG(_rebootCount);
-        PRINT_DEBUG(F("\n    uplink frame count = "));
+        PRINT_DEBUG(F("\n    uplink frame count: "));
         PRINT_DEBUG(_uplinkFrameCount);
-        PRINT_DEBUG(F("\n    sleep cycles = "));
+        PRINT_DEBUG(F("\n    sleep cycles: "));
         PRINT_DEBUG(_uplinkRateValue);
         PRINT_DEBUG(F("\n"));
     } else {

@@ -51,7 +51,7 @@ AmbaSat1App::AmbaSat1App()
 {
     if (AmbaSat1App::gApp != nullptr) {
         // complain loudly. Only one app object should be created.
-        PRINT_ERROR(F("ERROR - More than one AmbaSat1App object created."));
+        PRINT_ERROR(F("ERROR multiple AmbaSat1App objects"));
     }
     else {
         AmbaSat1App::gApp = this;
@@ -190,18 +190,18 @@ void AmbaSat1App::loop()
         if (transmitQueue[i] >= 0) {
             switch (transmitQueue[i]) {
                 case SATTELITE_PAYLOAD:
-                    PRINTLN_INFO(F("Transmitting Satellite Status."));
+                    PRINTLN_INFO(F("Sending Satellite Status"));
                     sendSensorPayload(*this);
                     break;
                 case LSM9DS1_PAYLOAD:
                     if (_lsm9DS1Sensor.isActive()) {
-                        PRINTLN_INFO(F("Transmitting LSM9DS1 sensor."));
+                        PRINTLN_INFO(F("Sending LSM9DS1 sensor"));
                         sendSensorPayload(_lsm9DS1Sensor);
                     }
                     break;
                 case MISSION_SENSOR_PAYLOAD:
                     if (_missionSensor.isActive()) {
-                        PRINTLN_INFO(F("Transmitting mission sensor"));
+                        PRINTLN_INFO(F("Sending mission sensor"));
                         sendSensorPayload(_missionSensor);
                     }
                     break;
@@ -441,7 +441,7 @@ uint8_t AmbaSat1App::executeBlinkCmd(uint8_t* recievedData, uint8_t recievedData
             blinkDurationMillis = 2000;
             break;                   
     }
-    PRINT_DEBUG(F("  blink command. count = "));
+    PRINT_DEBUG(F("  BLINK! count = "));
     PRINT_DEBUG(blinkCount);
     PRINT_DEBUG(F(", duration = "));
     PRINT_DEBUG(blinkDurationMillis);   
@@ -467,7 +467,7 @@ uint8_t AmbaSat1App::executeUplinkPatternCmd(uint8_t* recievedData, uint8_t reci
     UplinkPayloadType pattern = static_cast<UplinkPayloadType>(recievedData[0]);
     _config.setUplinkPattern(pattern, true);
 
-    PRINT_DEBUG(F("  set the uplink pattern to "));
+    PRINT_DEBUG(F("  set uplink pattern: "));
     PRINT_DEBUG(pattern);
     PRINT_DEBUG(F("\n"));
     return CMD_STATUS_SUCCESS;
@@ -481,9 +481,9 @@ uint8_t AmbaSat1App::executeUplinkRateCmd(uint8_t* recievedData, uint8_t recieve
 
     uint8_t rateValue = recievedData[0];
     _config.setUplinkSleepCycles(rateValue, true);
-    PRINT_DEBUG(F("  set the uplink rate to "));
+    PRINT_DEBUG(F("  set uplink rate: "));
     PRINT_DEBUG(rateValue);
-    PRINT_DEBUG(F(" sleep cycles\n"));
+    PRINT_DEBUG(F("\n"));
     return CMD_STATUS_SUCCESS;
 }
 
@@ -497,7 +497,7 @@ uint8_t AmbaSat1App::executeSetFrameCountCmd(uint8_t* recievedData, uint8_t reci
     _config.setUplinkFrameCount(frameCount, true);
     LMIC.seqnoUp = frameCount;
 
-    PRINT_DEBUG(F("  reset the uplink frame count to "));
+    PRINT_DEBUG(F("  reset uplink frame count: "));
     PRINT_DEBUG(frameCount);
     PRINT_DEBUG(F("\n"));
 
@@ -535,19 +535,19 @@ void onEvent(ev_t ev)
     switch (ev)
     {
         case EV_SCAN_TIMEOUT:
-            PRINTLN_DEBUG(F("EV_SCAN_TIMEOUT"));
+            // PRINTLN_DEBUG(F("EV_SCAN_TIMEOUT"));
             break;
         case EV_BEACON_FOUND:
-            PRINTLN_DEBUG(F("EV_BEACON_FOUND"));
+            // PRINTLN_DEBUG(F("EV_BEACON_FOUND"));
             break;
         case EV_BEACON_MISSED:
-            PRINTLN_DEBUG(F("EV_BEACON_MISSED"));
+            // PRINTLN_DEBUG(F("EV_BEACON_MISSED"));
             break;
         case EV_BEACON_TRACKED:
-            PRINTLN_DEBUG(F("EV_BEACON_TRACKED"));
+            // PRINTLN_DEBUG(F("EV_BEACON_TRACKED"));
             break;
         case EV_JOINING:
-            PRINTLN_DEBUG(F("EV_JOINING"));
+            // PRINTLN_DEBUG(F("EV_JOINING"));
             break;
         case EV_JOINED:
             PRINTLN_DEBUG(F("EV_JOINED"));
@@ -557,13 +557,13 @@ void onEvent(ev_t ev)
             digitalWrite(LED_PIN, LOW);
             break;
         case EV_RFU1:
-            PRINTLN_DEBUG(F("EV_RFU1"));
+            // PRINTLN_DEBUG(F("EV_RFU1"));
             break;
         case EV_JOIN_FAILED:
-            PRINTLN_DEBUG(F("EV_JOIN_FAILED"));
+            // PRINTLN_DEBUG(F("EV_JOIN_FAILED"));
             break;
         case EV_REJOIN_FAILED:
-            PRINTLN_DEBUG(F("EV_REJOIN_FAILED"));
+            // PRINTLN_DEBUG(F("EV_REJOIN_FAILED"));
             // Re-init
             os_setCallback(&initjob, initfunc);
             break;
@@ -582,24 +582,24 @@ void onEvent(ev_t ev)
                 PRINTLN_DEBUG(F("WARNING Recieved a downlink but code is not enabled to process it."));
 #endif
             }
-            PRINTLN_ERROR(F("EV_TXCOMPLETE (includes waiting for RX windows)"));
+            PRINTLN_ERROR(F("EV_TXCOMPLETE (includes RX windows)"));
             Serial.flush();
             break;
         case EV_LOST_TSYNC:
-            PRINTLN_DEBUG(F("EV_LOST_TSYNC"));
+            // PRINTLN_DEBUG(F("EV_LOST_TSYNC"));
             break;
         case EV_RESET:
-            PRINTLN_DEBUG(F("EV_RESET"));
+            // PRINTLN_DEBUG(F("EV_RESET"));
             break;
         case EV_RXCOMPLETE:
             // data received in ping slot
-            PRINTLN_DEBUG(F("EV_RXCOMPLETE"));
+            // PRINTLN_DEBUG(F("EV_RXCOMPLETE"));
             break;
         case EV_LINK_DEAD:
-            PRINTLN_DEBUG(F("EV_LINK_DEAD"));
+            // PRINTLN_DEBUG(F("EV_LINK_DEAD"));
             break;
         case EV_LINK_ALIVE:
-            PRINTLN_DEBUG(F("EV_LINK_ALIVE"));
+            // PRINTLN_DEBUG(F("EV_LINK_ALIVE"));
             break;
         default:
             PRINTLN_DEBUG(F("Unknown event"));
