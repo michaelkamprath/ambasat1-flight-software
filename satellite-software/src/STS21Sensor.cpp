@@ -94,7 +94,7 @@ const uint8_t* STS21Sensor::getCurrentMeasurementBuffer(void)
     //
     //  a total of 3 bytes
     //
-   
+
     uint8_t i2cBuffer[3];
 
     writeData(STS21_CMD_GET_TEMPERATURE_NOHOLD);
@@ -118,9 +118,9 @@ const uint8_t* STS21Sensor::getCurrentMeasurementBuffer(void)
     PRINT_DEBUG(F("    Temperature reading = "));
     PRINT_DEBUG(temp);
     PRINT_DEBUG(F(" °C ( 0x"));
-    PRINT_HEX_DEBUG(tempReading);   
+    PRINT_HEX_DEBUG(tempReading);
     PRINT_DEBUG(F(" ), sensor status = 0x"));
-    PRINT_HEX_DEBUG(i2cBuffer[0]); 
+    PRINT_HEX_DEBUG(i2cBuffer[0]);
     PRINT_DEBUG(F("\n"));
     return _buffer;
 }

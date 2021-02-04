@@ -309,17 +309,17 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     PRINT_DEBUG(F(", normalize temp = "));
 #if LOG_CELSIUS_TEMP == 0
     PRINT_DEBUG( (((float)temp_comp*9.0/5.0/100.0) + 32.0) );
-    PRINT_DEBUG(F(" °F, pressure = "));    
+    PRINT_DEBUG(F(" °F, pressure = "));
 #else
     PRINT_DEBUG((float)temp_comp/100.0);
     PRINT_DEBUG(F(" °C, pressure = "));
 #endif
     PRINT_DEBUG(press_comp);
-    PRINT_DEBUG(F(", humidity = "));    
+    PRINT_DEBUG(F(", humidity = "));
     PRINT_DEBUG(hum_comp);
-    PRINT_DEBUG(F(", gas ohms = "));    
+    PRINT_DEBUG(F(", gas ohms = "));
     PRINT_DEBUG(gas_res);
-    PRINT_DEBUG(F("\n")); 
+    PRINT_DEBUG(F("\n"));
 
     // now that we have a current temperature, update the gas resitance sensor calibration
     updateTemperatureTargetResistance(getGasHeaterTemperature(), temp_comp/100);
@@ -350,7 +350,6 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     _buffer[13] |= getIIRFilterCoef()&0x0F;
     hton_int16(getGasHeatDuration(), &_buffer[14]);
     hton_int16(getGasHeaterTemperature(), &_buffer[16]);
-   
     return _buffer;
 }
 
@@ -358,7 +357,6 @@ int32_t BME680Sensor::calibratedTemperatureReading(uint8_t temp_adc_msb, uint8_t
 {
     // calculate temp_adc;
     int32_t temp_adc = ((temp_adc_xlsb&0b11110000)/16) + ((int32_t)temp_adc_lsb*16) + ((int32_t)temp_adc_msb*4096);
-    
     // first get calibration values from registers
     int32_t par_t1, par_t2, par_t3;
     uint8_t reg_value;
@@ -382,7 +380,7 @@ int32_t BME680Sensor::calibratedTemperatureReading(uint8_t temp_adc_msb, uint8_t
      if (!readRegister(BME680_par_t3_REG, reg_value)) {
         return 0xFFFFFFFF;
     }
-    par_t3 = reg_value;   
+    par_t3 = reg_value;
 
     // calculate
     int64_t var1 = ((int32_t)temp_adc >> 3) - ((int32_t)par_t1 << 1);
@@ -427,14 +425,14 @@ int32_t BME680Sensor::calibratedPressureReading(uint8_t press_adc_msb, uint8_t p
     int32_t press_comp = 1048576 - press_adc;
     press_comp = (uint32_t)((press_comp - (var2 >> 12)) * ((uint32_t)3125));
     if (press_comp >= ((int32_t)1 << 30)) {
-        press_comp = ((press_comp / (uint32_t)var1) << 1); 
+        press_comp = ((press_comp / (uint32_t)var1) << 1);
     } else {
-        press_comp = ((press_comp << 1) / (uint32_t)var1); 
+        press_comp = ((press_comp << 1) / (uint32_t)var1);
     }
     var1 = ((int32_t)par_p9 * (int32_t)(((press_comp >> 3) * (press_comp >> 3)) >> 13)) >> 12;
     var2 = ((int32_t)(press_comp >> 2) * (int32_t)par_p8) >> 13;
     int32_t var3 = ((int32_t)(press_comp >> 8) * (int32_t)(press_comp >> 8) * (int32_t)(press_comp >> 8) * (int32_t)par_p10) >> 17; 
-    
+
     press_comp = (int32_t)(press_comp) + ((var1 + var2 + var3 + ((int32_t)par_p7 << 7)) >> 4);
 
     return press_comp;
@@ -481,15 +479,15 @@ int32_t BME680Sensor::calibratedGasResistance(uint8_t gas_adc_msb, uint8_t gas_a
     //
     // The following is a compression of the memory required to represent the 16 position array of 4-byte ints paramters
     // required for the algorithm. This array has repeated values, so the compression is to have a array of the
-    // distinct values, then a 16 position array of 1 byte indexes into the distinct values. A compile macro 
+    // distinct values, then a 16 position array of 1 byte indexes into the distinct values. A compile macro
     // is used to easily handle the index dereferenceing.
     //
-    // The original parameter array: 
-    // static const uint32_t const_array1_int[16] = { 
+    // The original parameter array:
+    // static const uint32_t const_array1_int[16] = {
     //      UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2147483647),
-	//      UINT32_C(2147483647), UINT32_C(2126008810), UINT32_C(2147483647), UINT32_C(2130303777),
-	//      UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2143188679), UINT32_C(2136746228),
-	//      UINT32_C(2147483647), UINT32_C(2126008810), UINT32_C(2147483647), UINT32_C(2147483647) 
+    //      UINT32_C(2147483647), UINT32_C(2126008810), UINT32_C(2147483647), UINT32_C(2130303777),
+    //      UINT32_C(2147483647), UINT32_C(2147483647), UINT32_C(2143188679), UINT32_C(2136746228),
+    //      UINT32_C(2147483647), UINT32_C(2126008810), UINT32_C(2147483647), UINT32_C(2147483647)
     // };
     //
 
@@ -511,11 +509,11 @@ int32_t BME680Sensor::calibratedGasResistance(uint8_t gas_adc_msb, uint8_t gas_a
     #define GET_const_array1_int(i) const_array1_int_values[const_array1_int_indexes[i]]
 
     // this array doesn't have repeated values so not worth compressing
-    static const uint32_t const_array2_int[16] = { 
+    static const uint32_t const_array2_int[16] = {
         UINT32_C(4096000000), UINT32_C(2048000000), UINT32_C(1024000000), UINT32_C(512000000),
-		UINT32_C(255744255), UINT32_C(127110228), UINT32_C(64000000), UINT32_C(32258064), 
+        UINT32_C(255744255), UINT32_C(127110228), UINT32_C(64000000), UINT32_C(32258064),
         UINT32_C(16016016), UINT32_C(8000000), UINT32_C(4000000), UINT32_C(2000000),
-        UINT32_C(1000000), UINT32_C(500000), UINT32_C(250000), UINT32_C(125000) 
+        UINT32_C(1000000), UINT32_C(500000), UINT32_C(250000), UINT32_C(125000)
     };
 
     int16_t gas_adc = (int16_t)(gas_adc_lsb/64) + (int16_t)gas_adc_msb*4;
@@ -666,7 +664,7 @@ uint8_t BME680Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, uin
         // Set Gas Heater Heat Time
         if (recievedDataLen != 2) {
             return CMD_STATUS_BAD_DATA_LEN;
-        }        
+        }
         int16_t millis = ntoh_int16(recievedData);
         if ((millis < 1)  || (millis > 4032)) {
             return CMD_STATUS_BAD_PARAM;
@@ -680,7 +678,7 @@ uint8_t BME680Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, uin
         // TODO: convert this to a 1 byte parameter that indicates offset from 200
         if (recievedDataLen != 2) {
             return CMD_STATUS_BAD_DATA_LEN;
-        }        
+        }
         int16_t plate_temp = ntoh_int16(recievedData);
         if ((plate_temp < 200)  || (plate_temp > 400)) {
             return CMD_STATUS_BAD_PARAM;
@@ -693,7 +691,7 @@ uint8_t BME680Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, uin
         PRINT_DEBUG(F("  default\n"));
         setDefaultValues();
     }
-    else { 
+    else {
         return CMD_STATUS_UNKNOWN_CMD;
     }
     this->_config.updateCRC();

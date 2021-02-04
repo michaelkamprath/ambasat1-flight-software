@@ -189,10 +189,10 @@ const uint8_t* SHT30Sensor::getCurrentMeasurementBuffer(void)
     }
     uint16_t temperatureReading = (uint16_t)localBuffer[0]*256 + localBuffer[1];
     uint16_t humidityReading = (uint16_t)localBuffer[3]*256 + localBuffer[4];
-   
+
     float temperature = -45.0 + 175.0*((float)temperatureReading)/65535.0;
     float humidity = 100.0*((float)humidityReading)/65535.0;
-    
+
     PRINT_DEBUG(F("    SHT30 readings are: temperature = "));
     PRINT_DEBUG(temperature);
     PRINT_DEBUG(F(" °C, humidity = "));

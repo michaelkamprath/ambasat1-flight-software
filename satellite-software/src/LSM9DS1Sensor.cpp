@@ -92,15 +92,15 @@ void LSM9DS1Sensor::end(void)
     writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG1_G, 0x00);
     writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG6_XL, 0x00);
 
-    // There has been a problem with the power usage of the Arduino Nano BLE boards. 
+    // There has been a problem with the power usage of the Arduino Nano BLE boards.
     // Due to a switch in pinnumbers the pull-ups keep drawing current after the call to IMU.end();
     // This shortens battery life. Most likely future updates solve the problem.
     // see https://forum.arduino.cc/index.php?topic=691488.15
     // code for if the old value is used
 #if defined(ARDUINO_ARDUINO_NANO33BLE) && PIN_ENABLE_SENSORS_3V3 == 32
     pinMode(PIN_ENABLE_I2C_PULLUP, OUTPUT);    // this restores the energy usage to very low power
-    digitalWrite(PIN_ENABLE_I2C_PULLUP, HIGH); 
-#endif 
+    digitalWrite(PIN_ENABLE_I2C_PULLUP, HIGH);
+#endif
 }
 
 bool LSM9DS1Sensor::isActive(void) const
@@ -120,7 +120,7 @@ void LSM9DS1Sensor::setSensorConfig(void)
     if (!isFound()) {
         return;
     }
-    // Configure the sensor options   
+    // Configure the sensor options
 
     // Gyro:
     //      * 59.5 Hz ODR (CTRL_REG1_G | 0b01000000)
@@ -140,8 +140,8 @@ void LSM9DS1Sensor::setSensorConfig(void)
     //      * 4 gauss (CTRL_REG2_M | 0b00000000)
     //      * Z-axis operative mode selection low power (CTRL_REG4_M | 0b00000000)
     //      * Big Endian (CTRL_REG4_M | 0b00000000)
-    writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG3_M, 0x20); 
-    writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M, 0x00); 
+    writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG3_M, 0x20);
+    writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M, 0x00);
     writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG4_M, 0x00);
 
     // now set the sensor sensitivity settings to their configured settings.
@@ -151,7 +151,7 @@ void LSM9DS1Sensor::setSensorConfig(void)
  }
 
 void LSM9DS1Sensor::setAccelFS(AccelerationSensitivitySetting config)
-{	
+{
     if (!isFound()) {
         return;
     }
@@ -237,7 +237,7 @@ void LSM9DS1Sensor::setMagnetFS(MagneticSensitivitySetting config) // 0=400.0; 1
     writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M,range) ;
 }
 
-const uint8_t* 
+const uint8_t*
 LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
 {
     if (!isActive()) {
@@ -259,7 +259,7 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
         return nullptr;
     }
 
-    // Magnetic 
+    // Magnetic
     if (!readRegisters(LSM9DS1_ADDRESS_M, LSM9DS1_OUT_X_L_M, (uint8_t*)magneticData, sizeof(magneticData))) 
     {
         PRINTLN_ERROR(F("ERROR reading LSM9DS1 magnetic data"));
@@ -284,7 +284,7 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
     //
     // While the AdaFruit library stores the above values in floats, they are
     // actually sourced from int16_t values. Converting back to int16_t should
-    // have no data loss. 
+    // have no data loss.
 
     hton_int16(accelData[0], &_buffer[0]);
     hton_int16(accelData[1], &_buffer[2]);
@@ -298,7 +298,7 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
     _buffer[18] = (uint8_t)getAcceleratonSensitivitySetting();
     _buffer[18] |= (uint8_t)getGysroSensitivitySetting();
     _buffer[19] = (uint8_t)getMagneticSensitivitySetting();
-   
+
     return _buffer;
 }
 
@@ -333,7 +333,7 @@ void LSM9DS1Sensor::writeConfigToBuffer(uint8_t* bufferBaseAddress) const
 {
     bufferBaseAddress[OFFSET_ACCELERATION_SENSITIVITY] = _accelSensitivity;
     bufferBaseAddress[OFFSET_GYRO_SENSITIVITY] = _gyroSensitivity;
-    bufferBaseAddress[OFFSET_MAGNETIC_SENSITIVITY] = _magneticSensitivity;    
+    bufferBaseAddress[OFFSET_MAGNETIC_SENSITIVITY] = _magneticSensitivity;
 }
 
 void LSM9DS1Sensor::setAcceleratonSensitivitySetting(AccelerationSensitivitySetting setting) {
@@ -357,14 +357,14 @@ uint8_t LSM9DS1Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, ui
         return CMD_STATUS_BAD_DATA_LEN;
     }
     PRINT_DEBUG(F("Set LSM9DS1 config\n"));
-    
+
     switch (command) {
         case 0x00:
             if (*recievedData > 0x04) return CMD_STATUS_BAD_PARAM;
             PRINT_DEBUG(F("  Accel = "));
             PRINT_DEBUG(*recievedData);
             PRINT_DEBUG(F("\n"));
-            setAcceleratonSensitivitySetting((AccelerationSensitivitySetting) *recievedData);        
+            setAcceleratonSensitivitySetting((AccelerationSensitivitySetting) *recievedData);
             break;
         case 0x01:
             if (((*recievedData)&0x8F) != 0 ) return CMD_STATUS_BAD_PARAM;
@@ -388,7 +388,7 @@ uint8_t LSM9DS1Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, ui
             return CMD_STATUS_BAD_PARAM;
     }
     this->_config.updateCRC();
-    setSensorConfig(); //cement the changes.    
+    setSensorConfig(); //cement the changes.
     return CMD_STATUS_SUCCESS;
 }
 #endif

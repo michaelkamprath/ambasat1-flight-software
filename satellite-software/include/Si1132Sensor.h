@@ -28,7 +28,7 @@ private:
     uint8_t readParameter(uint8_t param);
 
 protected:
-    // The Si1132 auto increment is on by default. Setting 
+    // The Si1132 auto increment is on by default. Setting
     // bit 6 actually turns off auto incrment. So, set this
     // value to 0 to disable setting autoincrement bit in base
     // class.

@@ -11,10 +11,10 @@ private:
 
     bool begin(void);
     void reset(void);
-    
+
 protected:
     // The SHT21 has no concept of register address autoincrement
-    virtual uint8_t i2cAutoIncrementBit(void) const             { return 0; } 
+    virtual uint8_t i2cAutoIncrementBit(void) const             { return 0; }
     virtual uint8_t i2cDeviceAddress(void) const                { return 0x4A; }
 public:
     STS21Sensor(PersistedConfiguration& config);

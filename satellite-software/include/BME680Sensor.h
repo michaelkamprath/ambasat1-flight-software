@@ -56,13 +56,13 @@ private:
     bool calculateTemperatureTargetResistance(int16_t target_temp, int16_t amb_temp, uint8_t& out_res_heat_x );
     bool updateTemperatureTargetResistance(int16_t target_temp, int16_t amb_temp);
     uint16_t calculateMeasurmentDuration(void) const;
-    
+
     int32_t calibratedTemperatureReading(uint8_t temp_adc_msb, uint8_t temp_adc_lsb, uint8_t temp_adc_xlsb, int32_t& t_fine);
     int32_t calibratedPressureReading(uint8_t press_adc_msb, uint8_t press_adc_lsb, uint8_t press_adc_xlsb, int32_t t_fine);
     int32_t calibratedHumidityReading(uint8_t hum_adc_msb, uint8_t hum_adc_lsb, int32_t temp_comp);
     int32_t calibratedGasResistance(uint8_t gas_adc_msb, uint8_t gas_adc_lsb);
     void setSensorConfig(void);
-    
+
 protected:
     virtual uint8_t i2cAutoIncrementBit(void) const             { return 0; }
 
@@ -109,7 +109,7 @@ public:
     void setGasHeatTemperature(int16_t setting, uint8_t profile = 0);
 
 #ifdef ENABLE_AMBASAT_COMMANDS
-    // handles a command payload. 
+    // handles a command payload.
     virtual uint8_t handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen);
 
 #endif

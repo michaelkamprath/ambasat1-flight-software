@@ -17,7 +17,7 @@ SensorBase::SensorBase(PersistedConfiguration& config)
         PRINTLN_DEBUG(F("Global I2C reset"));
         Wire.beginTransmission(0x00); // global i2c reset address
         Wire.write(0x06);
-        Wire.endTransmission(); 
+        Wire.endTransmission();
         delay(50); // wait for everything to reboot
         PRINTLN_DEBUG(F("I2C Wire has been set up"));
         _isI2CSetUp = true;
@@ -40,7 +40,7 @@ bool SensorBase::writeData(uint8_t deviceAddress, const uint8_t* data, size_t le
     if (deviceAddress == 0xFF) {
         // this is not a i2c sensor
         return false;
-    }    
+    }
     Wire.beginTransmission(deviceAddress);
 
     for (size_t i = 0; i < length; i++)
@@ -200,7 +200,7 @@ bool SensorBase::writeRegister(uint8_t deviceAddress, uint8_t address, uint8_t v
 }
 
 bool SensorBase::updateRegister(uint8_t deviceAddress, uint8_t address, uint8_t update_mask, uint8_t value)
-{   
+{
     uint8_t curValue;
     if (!readRegister(deviceAddress, address, curValue)) {
         return false;

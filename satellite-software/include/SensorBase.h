@@ -43,9 +43,9 @@ public:
     // the sensor hardware can be found and responds to queries
     bool isFound(void) const                    { return _isFound; }
 
-    // the sensor is collecting measurements per configuration. Returns false if sensor is 
+    // the sensor is collecting measurements per configuration. Returns false if sensor is
     // configured to be off. Returns false if sensor is not found.
-    // Override to reflect specific sensor confiuration.  
+    // Override to reflect specific sensor confiuration.
     virtual bool isActive(void) const           { return isFound(); }
 
     //
@@ -55,7 +55,7 @@ public:
     bool writeData(const uint8_t* data, size_t length, bool sendStop = true )       { return writeData(i2cDeviceAddress(), data, length, sendStop); }
     bool writeRegister(uint8_t address, uint8_t value)                              { return writeRegister(i2cDeviceAddress(), address, value); }
     bool readData(uint8_t* data, uint8_t length, bool sendStop = true )             { return readData(i2cDeviceAddress(), data, length, sendStop); }
-    bool readRegister(uint8_t address, uint8_t& register_value)                     { return readRegister(i2cDeviceAddress(), address, register_value); }                          
+    bool readRegister(uint8_t address, uint8_t& register_value)                     { return readRegister(i2cDeviceAddress(), address, register_value); }
     bool readRegisters(uint8_t address, uint8_t* data, size_t length)               { return readRegisters(i2cDeviceAddress(), address, data, length); }
     bool updateRegister(uint8_t address, uint8_t preserve_mask, uint8_t value)      { return updateRegister(i2cDeviceAddress(), address, preserve_mask, value); }
 };

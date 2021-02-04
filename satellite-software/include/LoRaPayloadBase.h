@@ -11,7 +11,7 @@
 #define CMD_STATUS_BAD_PARAM        0x03
 
 
-// 
+//
 // This class is really just an interface definition
 //
 class LoRaPayloadBase {
@@ -30,7 +30,7 @@ public:
     virtual uint8_t getPort() const = 0;
 
 #ifdef ENABLE_AMBASAT_COMMANDS
-    // handles a command payload. 
+    // handles a command payload.
     virtual uint8_t handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen)          { return CMD_STATUS_UNIMPLEMENTED; }
 
 #endif

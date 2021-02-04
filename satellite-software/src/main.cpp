@@ -7,7 +7,7 @@ AmbaSat1App* satelliteApp;
 void setup()
 {
   Serial.begin(9600);
-  
+
   satelliteApp = new AmbaSat1App();
   satelliteApp->setup();
 }

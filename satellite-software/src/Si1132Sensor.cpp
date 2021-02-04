@@ -131,7 +131,7 @@ void Si1132Sensor::setup(void)
     }
 
     reset();
- 
+
     // sendCommand(SI1132_CMD_RESET);
     // delay(10);
 
@@ -144,10 +144,10 @@ void Si1132Sensor::setup(void)
         PRINTLN_DEBUG(F("ERROR could not set Si1132 UCOEF values"));
         return;
     }
- 
+
     // turn on UV Index, ALS IR, and ALS Visible
     setParameter(SI1132_PARAM_CHLIST, 0xB0);
-        
+
     // set up VIS sensor
     //  clock divide = 1
     uint8_t adcGain = getVisibleADCGain();
@@ -189,7 +189,7 @@ void Si1132Sensor::setup(void)
     //  set IR_RANGE bit for high signal. Must do "read and modify" per spec
     uint8_t cur_value = readParameter(SI1132_PARAM_ALS_IR_ADC_MISC);
     if (!setParameter(
-        SI1132_PARAM_ALS_IR_ADC_MISC, 
+        SI1132_PARAM_ALS_IR_ADC_MISC,
         isInfraRedHighSignalRange() ? (0b00100000|cur_value) : (0b11011111&cur_value)
     )) {
         PRINTLN_DEBUG(F("ERROR could not set SI1132_PARAM_ALS_IR_ADC_MISC"));
@@ -262,7 +262,7 @@ bool Si1132Sensor::setParameter(uint8_t param, uint8_t value)
     writeRegister(SI1132_PARAM_WR_REG, value);
     // send command
     bool success = sendCommand(cmd);
-   
+
     if (!success) {
         // read parameter
         sendCommand(SI1132_CMD_PARAM_QUERY|param);

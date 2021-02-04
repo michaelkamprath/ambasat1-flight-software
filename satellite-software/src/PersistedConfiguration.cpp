@@ -110,7 +110,7 @@ void PersistedConfiguration::updateCRC(void)
     eeprom_update_dword((uint32_t*)CONFIG_CRC_ADDR, crc_value);
 }
 
-bool PersistedConfiguration::checkCRC(void) const 
+bool PersistedConfiguration::checkCRC(void) const
 {
     uint32_t saved_crc_value = eeprom_read_dword((uint32_t*)CONFIG_CRC_ADDR);
     return (saved_crc_value == getCRC());
@@ -118,7 +118,7 @@ bool PersistedConfiguration::checkCRC(void) const
 bool PersistedConfiguration::isEEPROMErased(void) const
 {
     // The first and last byte of EEPROM must be 0x00 to consider the
-    // EEPROM as not erased. 
+    // EEPROM as not erased.
     uint8_t firstByte = eeprom_read_byte((uint8_t*)0x0000);
     uint8_t lastByte = eeprom_read_byte((uint8_t*)E2END);
 

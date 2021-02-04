@@ -85,7 +85,7 @@ public:
 
     AccelerationSensitivitySetting getAcceleratonSensitivitySetting(void) const     { return _accelSensitivity; }
     void setAcceleratonSensitivitySetting(AccelerationSensitivitySetting seting);
-    
+
     GyroSensitivitySetting getGysroSensitivitySetting(void) const                   { return _gyroSensitivity; }
     void setGysroSensitivitySetting(GyroSensitivitySetting setting);
 
@@ -93,7 +93,7 @@ public:
     void setMagneticSensitivitySetting(MagneticSensitivitySetting setting);
 
 #ifdef ENABLE_AMBASAT_COMMANDS
-    // handles a command payload. 
+    // handles a command payload.
     virtual uint8_t handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen);
 
 #endif

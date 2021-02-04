@@ -79,7 +79,7 @@ public:
 
     uint32_t getUplinkFrameCount(void) const                { return _uplinkFrameCount; }
     void setUplinkFrameCount(uint32_t frameCount, bool updateCRC = true);
-    
+
     uint8_t getUplinkPattern(void) const                    { return _uplinkPattern; }
     void setUplinkPattern(uint8_t pattern, bool updateCRC = true);
 
@@ -87,7 +87,7 @@ public:
     void setLastPayloadUplinked(UplinkPayloadType payload, bool updateCRC = true);
 
     uint8_t getUplinkSleepCycles(void) const                { return _uplinkRateValue; }
-    void setUplinkSleepCycles(uint8_t rateValue, bool updateCRC = true);   
+    void setUplinkSleepCycles(uint8_t rateValue, bool updateCRC = true);
 };
 
 

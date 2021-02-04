@@ -148,9 +148,9 @@ void AmbaSat1App::setup()
     digitalWrite(LED_PIN, LOW);
 }
 
-void AmbaSat1App::loop() 
+void AmbaSat1App::loop()
 {
-    
+
     uint8_t pattern = _config.getUplinkPattern();
     UplinkPayloadType lastPayload = _config.getLastPayloadUplinked();
     PRINT_INFO(F("Transmit pattern "));
@@ -216,7 +216,7 @@ void AmbaSat1App::loop()
         }
     }
     // defer CRC calculation until subsequent frame count config being set
-    _config.setLastPayloadUplinked(lastPayload, false);    
+    _config.setLastPayloadUplinked(lastPayload, false);
     //
     // technically there is some risk that the satellite will loose power between
     // the first transmission above and the last one, and in such case we will not
@@ -259,7 +259,7 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
     PRINT_INFO(F("  Sending payload = "));
     print_buffer(data_ptr, sensor.getMeasurementBufferSize());
     Serial.flush();
-#endif  
+#endif
 
     // LMIC seems to crash here if we previously just recieved a downlink AND
     // there are any pending data in the Serial queue. So flush the Serial queue.
@@ -269,15 +269,15 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
         (xref2u1_t)data_ptr,
         sensor.getMeasurementBufferSize(),
         0
-    ); 
-  
-    // Again, LMIC seems to flake out after recived downlinks without this delay. 
-    // Seems to be some interaction with the serial prints that follow. Since 
+    );
+
+    // Again, LMIC seems to flake out after recived downlinks without this delay.
+    // Seems to be some interaction with the serial prints that follow. Since
     // LMIC is a black box and 50 milliseconds isn't all that much, so just wait.
     delay(50);
 
     // Must wait for the TX operations of LMIC.opmode to go to zero in order to handle
-    // any downlink ACK that was requested. 
+    // any downlink ACK that was requested.
     // TODO: determine the utility of the _sleeping variable given the forced wait until the radio is complete.
     while((!_sleeping) || (LMIC.opmode&0x00FF) != OP_NONE) {
         os_runloop_once();
@@ -377,15 +377,15 @@ void AmbaSat1App::processQueuedCommand(void)
         (xref2u1_t)replyBuffer,
         3,
         0
-    ); 
-  
-    // Again, LMIC seems to flake out after recived downlinks without this delay. 
-    // Seems to be some interaction with the serial prints that follow. Since 
+    );
+
+    // Again, LMIC seems to flake out after recived downlinks without this delay.
+    // Seems to be some interaction with the serial prints that follow. Since
     // LMIC is a black box and 50 milliseconds isn't all that much, so just wait.
     delay(50);
 
     // Must wait for the TX operations of LMIC.opmode to go to zero in order to handle
-    // any downlink ACK that was requested. 
+    // any downlink ACK that was requested.
     // TODO: determine the utility of the _sleeping variable given the forced wait until the radio is complete.
     while((!_sleeping) || (LMIC.opmode&0x00FF) != OP_NONE) {
         os_runloop_once();
@@ -418,7 +418,7 @@ uint8_t AmbaSat1App::handleCommand(uint16_t cmdSequenceID, uint8_t command, uint
     return CMD_STATUS_UNKNOWN_CMD;
 }
 
-uint8_t AmbaSat1App::executeBlinkCmd(uint8_t* recievedData, uint8_t recievedDataLen) 
+uint8_t AmbaSat1App::executeBlinkCmd(uint8_t* recievedData, uint8_t recievedDataLen)
 {
     if (recievedDataLen != 1 ) {
         return CMD_STATUS_BAD_DATA_LEN;
@@ -433,18 +433,18 @@ uint8_t AmbaSat1App::executeBlinkCmd(uint8_t* recievedData, uint8_t recievedData
             break;
         case 0x40:
             blinkDurationMillis = 500;
-            break;                   
+            break;
         case 0x80:
             blinkDurationMillis = 1000;
-            break;                   
+            break;
         case 0xC0:
             blinkDurationMillis = 2000;
-            break;                   
+            break;
     }
     PRINT_DEBUG(F("  BLINK! count = "));
     PRINT_DEBUG(blinkCount);
     PRINT_DEBUG(F(", duration = "));
-    PRINT_DEBUG(blinkDurationMillis);   
+    PRINT_DEBUG(blinkDurationMillis);
     PRINT_DEBUG(F(" ms\n"));
 
     for (int16_t i = 0; i <blinkCount; i++) {
@@ -456,7 +456,7 @@ uint8_t AmbaSat1App::executeBlinkCmd(uint8_t* recievedData, uint8_t recievedData
         }
     }
     delay(100);
-    return CMD_STATUS_SUCCESS;   
+    return CMD_STATUS_SUCCESS;
 }
 
 uint8_t AmbaSat1App::executeUplinkPatternCmd(uint8_t* recievedData, uint8_t recievedDataLen)
@@ -683,7 +683,7 @@ int16_t AmbaSat1App::readVccMilliVolts(void) const
 }
 #endif
 
-const uint8_t* 
+const uint8_t*
 AmbaSat1App::getCurrentMeasurementBuffer(void)
 {
     // Buffer format
@@ -714,6 +714,5 @@ AmbaSat1App::getCurrentMeasurementBuffer(void)
     }
 
     _buffer[6] = sensorStatus;
-    
     return _buffer;
 }

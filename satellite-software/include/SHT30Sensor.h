@@ -3,7 +3,7 @@
 #include "SensorBase.h"
 
 
-class SHT30Sensor : public SensorBase 
+class SHT30Sensor : public SensorBase
 {
     uint8_t _buffer[5];
 
@@ -18,7 +18,7 @@ class SHT30Sensor : public SensorBase
 
 protected:
     // The SHT30 has no concept of register address autoincrement
-    virtual uint8_t i2cAutoIncrementBit(void) const             { return 0; } 
+    virtual uint8_t i2cAutoIncrementBit(void) const             { return 0; }
     virtual uint8_t i2cDeviceAddress(void) const                { return 0x44; }
 public:
     SHT30Sensor(PersistedConfiguration& config);
