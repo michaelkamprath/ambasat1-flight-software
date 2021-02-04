@@ -141,6 +141,14 @@ The uplink frame count is used by The Things Network to validate the aunthentici
 * **Command Data** : Two bytes interpreted as a `int16_t` in big endian order. This is the uplink frame count that should be set. 
 
 #### LSM9DS1 Commands
+The following variables will be able to be configured for the LSM9DS1 sensor:
+
+| Command Title | Command ID |Command Data | Default Value |
+|:--|:-:|:--|:-:|
+| Acceleration sensitivity setting| `0x00` | One byte containing one of the following enumerations:<br><br>`0x00` - Acceleration sensitivity off<br>`0x01` - Acceleration sensitivity 2g<br>`0x02` - Acceleration sensitivity 4g<br>`0x03` - Acceleration sensitivity 8g<br>`0x04` - Acceleration sensitivity 16g | `0x01` |
+| Gyroscope sensitivity setting| `0x01` | One byte containing one of the following enumerations:<br><br>`0x00` - Gyroscope sensitivity off<br>`0x10` - Gyroscope sensitivity 245 DPS<br>`0x20` - Gyroscope sensitivity 500 DPS<br>`0x40` - Gyroscope sensitivity 2000 DPS | `0x10` |
+| Magnetic sensitivity setting| `0x02` | One byte containing one of the following enumerations:<br><br>`0x00` - Magnetic sensitivity off<br>`0x01` - Magnetic sensitivity 4 Gauss<br>`0x02` - Magnetic sensitivity 8 Gauss<br>`0x03` - Magnetic sensitivity 12 Gauss<br>`0x04` - Magnetic sensitivity 16 Gauss | `0x01` |
+| Set default | `0x03` | Set all LSM9DS1 settings to defaults | N/A |
 
 #### Mission Sensor Commands
 
@@ -155,7 +163,7 @@ The following variables will be able to be configured for the BME680 sensor:
 | Set IIR Filter Coefficient | `0x04` | One byte containing one of the following enumerations:<br><br>`0b000` - coefficient value is 0<br>`0b001` - coefficient value is 1<br>`0b010` - coefficient value is 3<br>`0b011` - coefficient value is 7<br>`0b100` - coefficient value is 15<br>`0b101` - coefficient value is 31<br>`0b101` - coefficient value is 63<br>`0b101` - coefficient value is 127. | `0b010` |
 | Set Gas Heater Heat Time | `0x05` | A two byte `int16` value indicating the amount of time in milliseconds that should be used to heat the gas sensor hot plate. The valid range is between 1 and 4032 milliseconds. | 150 |
 | Set Gas Heater Heat Temperature | `0x06` | A two byte `int16` value indicating the temperature in Celsius that the gas sensor hot plate should be warmed to before making a measurement. The valid range is between 200 °C and 400 °C.  | 320 |
-
+| Set default | `0x07` | Set all BME680 settings to defaults | N/A |
 
 ##### Sensor 6 - Si1132
 The following variables will be able to be configured for the Si1132 sensor:
