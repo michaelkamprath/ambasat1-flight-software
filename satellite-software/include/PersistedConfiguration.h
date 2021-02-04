@@ -3,14 +3,13 @@
 #include "AmbaSat1Config.h"
 
 //
-// Configuration ENUMs
+// Configuration ENUMs and defines
 //
 
-typedef enum {
-    SATTELITE_PAYLOAD = 0,
-    LSM9DS1_PAYLOAD = 1,
-    MISSION_SENSOR_PAYLOAD = 2
-} UplinkPayloadType;
+#define SATTELITE_PAYLOAD           0
+#define LSM9DS1_PAYLOAD             1
+#define MISSION_SENSOR_PAYLOAD      2
+typedef int8_t UplinkPayloadType;
 
 //
 // Sensor Configuration Interface

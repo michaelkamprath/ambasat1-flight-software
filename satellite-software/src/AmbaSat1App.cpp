@@ -152,55 +152,71 @@ void AmbaSat1App::loop()
 {
     
     uint8_t pattern = _config.getUplinkPattern();
-    uint8_t cycles = 3;
-    uint8_t system = 2;
+    UplinkPayloadType lastPayload = _config.getLastPayloadUplinked();
+    PRINT_INFO(F("Transmit pattern "));
+    PRINT_INFO(pattern);
+    PRINT_INFO(F(", last payload "));
+    PRINT_INFO(lastPayload);
+    PRINT_INFO(F("\n"));
+
+    int8_t transmitQueue[3] = {-1, -1, -1};
 
     switch (pattern) {
-        case 0x01:
-            system = (uint8_t)_config.getLastPayloadUplinked();
-            if (system == 2) _config.setLastPayloadUplinked((UplinkPayloadType) 0);
-            else _config.setLastPayloadUplinked((UplinkPayloadType) (system+1));
+        default:
+        case 0:
+            // transmit all sensors in sequence
+            transmitQueue[0] = SATTELITE_PAYLOAD;
+            transmitQueue[1] = LSM9DS1_PAYLOAD;
+            transmitQueue[2] = MISSION_SENSOR_PAYLOAD;
             break;
-        case 0x02:
-            system = (uint8_t)_config.getLastPayloadUplinked();
-            cycles = 1;
+        case 1:
+            // transmit all sensors in sequence but rotate starting point
+            transmitQueue[0] = (lastPayload+2)%3;
+            transmitQueue[1] = (lastPayload+3)%3;
+            transmitQueue[2] = (lastPayload+4)%3;
             break;
-        case 0x03:
-            cycles = 1;
-        break;
+        case 2:
+            // transmit oly one sensor
+            transmitQueue[0] = (lastPayload+1)%3;
+            break;
+        case 3:
+            // transmit satellite data and alternate between LSM9DS1 and mission
+            transmitQueue[0] = SATTELITE_PAYLOAD;
+            transmitQueue[1] = lastPayload == LSM9DS1_PAYLOAD ? MISSION_SENSOR_PAYLOAD : LSM9DS1_PAYLOAD;
+            break;
     }
 
-    for (uint8_t i = 0; i < cycles; ++i) {
-        if (system > 1) system = 0;
-        else ++system;
-
-        if (system == 0) {
-            PRINTLN_INFO(F("Transmitting Satellite Status."));
-            sendSensorPayload(*this);
+    for (int8_t i = 0; i < 3; i++) {
+        if (transmitQueue[i] >= 0) {
+            switch (transmitQueue[i]) {
+                case SATTELITE_PAYLOAD:
+                    PRINTLN_INFO(F("Transmitting Satellite Status."));
+                    sendSensorPayload(*this);
+                    break;
+                case LSM9DS1_PAYLOAD:
+                    if (_lsm9DS1Sensor.isActive()) {
+                        PRINTLN_INFO(F("Transmitting LSM9DS1 sensor."));
+                        sendSensorPayload(_lsm9DS1Sensor);
+                    }
+                    break;
+                case MISSION_SENSOR_PAYLOAD:
+                    if (_missionSensor.isActive()) {
+                        PRINTLN_INFO(F("Transmitting mission sensor"));
+                        sendSensorPayload(_missionSensor);
+                    }
+                    break;
+                default:
+                    // this should never happen
+                    break;
+            }
             _sleeping = false;
-            if (pattern == 0x03) {
-                if (_config.getLastPayloadUplinked() == LSM9DS1_PAYLOAD) system = 2;
-                else system = 1;
-            }
+            lastPayload = transmitQueue[i];
+        } else {
+            break;
         }
-        if (system == 1) {
-            if (_lsm9DS1Sensor.isActive()) {
-                PRINTLN_INFO(F("Transmitting LSM9DS1 sensor."));
-                sendSensorPayload(_lsm9DS1Sensor);
-                _sleeping = false;
-            }
-        }
-        if (system == 2) {
-            if (_missionSensor.isActive()) {
-                PRINTLN_INFO(F("Transmitting mission sensor"));
-                sendSensorPayload(_missionSensor);
-                _sleeping = false;
-            }
-        }
-        
-        if (pattern > 0x01) _config.setLastPayloadUplinked((UplinkPayloadType) system);        
-    } 
-    
+    }
+    // defer CRC calculation until subsequent frame count config being set
+    _config.setLastPayloadUplinked(lastPayload, false);    
     //
     // technically there is some risk that the satellite will loose power between
     // the first transmission above and the last one, and in such case we will not

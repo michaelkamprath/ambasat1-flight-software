@@ -101,44 +101,12 @@ The general format of the command downlink is:
 | `uint8_t*` | Command Data | An arbitrary length of 0 or more bytes containing data specific to the command being sent. The size of format of this data blob is defined by the command sent. |
 
 #### Satellite Commands
-
-##### Blink LED
-Because the aliens in space like blinking lights too. This command causes the LED installed on the AmbaSat-1 to blink.
-
-* **Command ID**  : `0x01` 
-* **Command Data** : A single byte is used for the blink command data. 
-  * The most significant 2 bits are used to indicate the blink duration as follows:
-     *  `00` = 0.1 second blinks
-     *  `01` = 0.5 second blinks
-     *  `10` = 1 second blinks
-     *  `11` = 2 second blinks
-  *  The least significant 6 bits are used to indicate the number of blinks to make. 
- 
-For example, the hex value of 0x84 would cause 4 blinks each 1 second long.
-
-##### Set Sensor Telemetry Uplink Pattern
-Changes the uplink pattern that the AmbaSat uses. An uplink pattern indicates what the AmbaSat will transmit each time it starts a transmission sequence.
-
-* **Command ID**  : `0x02` 
-* **Command Data** : A single byte is used to indicate which pattern to use:
-  * `0x00` - All data payloads will be transmitted sequentially with this pattern: Satellite, LSM9DS1, Mission Sensor
-  * `0x01` - All data payloads will be transmitted sequentially, but each uplink sequence will start with a different data payload. This pattern attempts to mitigate the satellite getting short periods of power, not long enough to transmit all payloads. 
-  * `0x02` - Only a single data payload will be transmitted during each uplink sequence, rotating through the payloads type with each uplink.
-  * `0x03` - Satellite + 1 data payloads will be transmitted during each uplink sequence. The second payload in addtion to the satellite payload will alternate between the LSM9DS1 and the mission sensor payloads.
-
-##### Set Sensor Telemetry Uplink Rate
-Changes the amount of time in between the telemetry uplink transmissions. During the time in between uplinks tranmissions, the AmbaSat-1 will go into low power mode. 
-
-* **Command ID**  : `0x03` 
-* **Command Data** : A single byte interpreted as a `uint8_t` value which represents the number of 8 second periods that the satellite should sleep in between uplink transmissions. 
-
-##### Set Uplink Frame Count
-The uplink frame count is used by The Things Network to validate the aunthenticity of an uplink and in turn process it. In this frame count should get out of sync, typically due to failed transmissions, resetting the uplink frame count might help. Note that this command is only useful if you have configured The Things Network to enforce frame counters. 
-
-**IMPORTANT**: This is a risky command. Setting an incorrect value could cause The Things Network to ignore uplinks from the AmbaSat. Use with care.
-
-* **Command ID**  : `0x04` 
-* **Command Data** : Two bytes interpreted as a `int16_t` in big endian order. This is the uplink frame count that should be set. 
+| Command Title | Command ID |Command Data | Default Value |
+|:--|:-:|:--|:-:|
+| Blink LED | `0x01` | The most significant 2 bits are used to indicate the blink duration as follows:<br><br>`00` = 0.1 second blinks<br>`01` = 0.5 second blinks<br>`10` = 1 second blinks<br>`11` = 2 second blinks<br><br>The least significant 6 bits are used to indicate the number of blinks to make. | _none_ |
+| Set Sensor Telemetry Uplink Pattern |  `0x02` | A single byte is used to indicate which pattern to use:<br><br>`0x00` - All data payloads will be transmitted sequentially with this pattern: Satellite, LSM9DS1, Mission Sensor<br>`0x01` - All data payloads will be transmitted sequentially, but each uplink sequence will start with a different data payload. This pattern attempts to mitigate the satellite getting short periods of power, not long enough to transmit all payloads.<br>`0x02` - Only a single data payload will be transmitted during each uplink sequence, rotating through the payloads type with each uplink.<br>`0x03` - Satellite + 1 data payloads will be transmitted during each uplink sequence. The second payload in addtion to the satellite payload will alternate between the LSM9DS1 and the mission sensor payloads. | `0x00` |
+| Set Sensor Telemetry Uplink Rate | `0x03` | A single byte interpreted as a `uint8_t` value which represents the number of 8 second periods that the satellite should sleep in between uplink transmissions. | 75 | 
+| Set Uplink Frame Count | `0x04` | The uplink frame count is used by The Things Network to validate the aunthenticity of an uplink and in turn process it. In this frame count should get out of sync, typically due to failed transmissions, resetting the uplink frame count might help. Note that this command is only useful if you have configured The Things Network to enforce frame counters.<br><br>The data of this command is two bytes interpreted as a `int16_t` in big endian order. This is the uplink frame count that should be set.<br><br>**IMPORTANT**: This is a risky command. Setting an incorrect value could cause The Things Network to ignore uplinks from the AmbaSat. Use with care. | _none_ |
 
 #### LSM9DS1 Commands
 The following variables will be able to be configured for the LSM9DS1 sensor:
