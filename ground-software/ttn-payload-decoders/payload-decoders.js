@@ -11,6 +11,11 @@ function convertTwoBytesToSignedInt( highByte, lowByte ) {
   return result;
 }
 
+function convertTwoBytesToUnsignedInt( highByte, lowByte ) {
+	var x = (((highByte & 0xFF) << 8) | (lowByte & 0xFF));
+	return x;
+}
+
 function convertFourBytesToUnsignedInt( hhByte, hlByte, lhByte, llByte ) {
 	var result = hhByte;
 	result<<=8;
@@ -304,9 +309,9 @@ function DecodeSI1132Sensor(bytes) {
 	}
 
 	return {
-		uv: convertTwoBytesToSignedInt(bytes[0], bytes[1])/100.0,
-		visible: convertTwoBytesToSignedInt(bytes[2], bytes[3]),
-		ir: convertTwoBytesToSignedInt(bytes[4], bytes[5]),
+		uv: convertTwoBytesToUnsignedInt(bytes[0], bytes[1])/100.0,
+		visible: convertTwoBytesToUnsignedInt(bytes[2], bytes[3]),
+		ir: convertTwoBytesToUnsignedInt(bytes[4], bytes[5]),
 		adc_gain_visible: bytes[6],
 		adc_gain_ir: bytes[7],
 		high_signal_visible: Boolean((bytes[8]&0x01) > 0),
