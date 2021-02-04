@@ -25,7 +25,7 @@ The AmbaSat-1 picosat is cuilt with an external 4 MHz resonator to drive the ATm
 * **AmbaSat-1** - This is the original board definition provided by the AmbaSat-1 makers. This definition expects the ATmega328P to be configured to use the internal clock at 1 Mhz. The ATmega328P fuses for this board are `(E:FE, H:D6, L:62)`.
 * **AmbaSat-1b** -  This board definition enables the use of the external 4 MHz resonator on the AmbaSat-1 picosat and a BOD of 1.8V. This hardware configuration is required if you wish to enable commands to the AmbaSat-1 via downlinks. The ATmega328P fuses for this board are `(E:FE, H:D6, L:F7)`.
 
-The sole difference betwee these hardware configurations is the fuse configuration the ATmega328P is burned with, and the corresponding configuration to the MiniCore bootloader that is burned on the the chip.
+The sole difference between these hardware configurations is the fuse configuration the ATmega328P is burned with, and the corresponding configuration to the MiniCore bootloader that is burned on the the chip.
 
 ### Telemetry and Status Uplinks
 
@@ -185,7 +185,7 @@ In an effort to keep the code footprint small, the following actions are taken:
 * **Unused sensor code not compiled** - Though this software is intended to be general purpose across all sensor types, only the configured sensor should compiled and linked when building. This will be accomplish through compiler macros.
 
 
-### Radition Hardness
+### Radiation Hardness
 Given the space environment, I would expect bits to get flipped due to the radiation. I supposed there isn't much we can do about this given the low cost nature of the AmbaSat. However, we can implement some simple data integrity checks. `TBD`
 
 ## References
