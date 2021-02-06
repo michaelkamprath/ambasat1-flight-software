@@ -24,7 +24,7 @@ function convertFourBytesToUnsignedInt( hhByte, hlByte, lhByte, llByte ) {
 	result += lhByte;
 	result<<=8;
 	result += llByte;
-	
+
 	return result>>>0;
 }
 function DecodeSatelliteStatus(bytes) {
@@ -33,23 +33,22 @@ function DecodeSatelliteStatus(bytes) {
 		return {
 			error: "payload length is not correct size",
 			port: port,
-			length: bytes.length 
+			length: bytes.length
 		};
 	}
-	
+
 	var volts = convertTwoBytesToSignedInt(bytes[4], bytes[5]);
 	var isLSM9DS1Found = Boolean((bytes[6]&0x01) > 0);
 	var isLSM9DS1Active = Boolean((bytes[6]&0x02) > 0);
 	var isMissionSensorFound = Boolean((bytes[6]&0x10) > 0);
 	var isMissionSensorActive = Boolean((bytes[6]&0x20) > 0);
-	
-	
+
 	return {
 		boot_count: convertFourBytesToUnsignedInt(bytes[0],bytes[1],bytes[2],bytes[3]),
 		milli_volts: volts,
 		LSM9DS1_found: isLSM9DS1Found,
 		LSM9DS1_active: isLSM9DS1Active,
-		mission_sensor_found: isMissionSensorFound,		
+		mission_sensor_found: isMissionSensorFound,
 		mission_sensor_active: isMissionSensorActive
 	};
 }
@@ -60,10 +59,10 @@ function DecodeLSM9DS1Sensor(bytes) {
 		return {
 			error: "payload length is not correct size",
 			port: port,
-			length: bytes.length 
+			length: bytes.length
 		};
 	}
-	
+
 	var rawAccelX = convertTwoBytesToSignedInt(bytes[0], bytes[1]);
 	var rawAccelY = convertTwoBytesToSignedInt(bytes[2], bytes[3]);
 	var rawAccelZ = convertTwoBytesToSignedInt(bytes[4], bytes[5]);
@@ -89,9 +88,9 @@ function DecodeLSM9DS1Sensor(bytes) {
 			accelSensitivty = 0.732;
 			break;
 		default:
-			break;	
+			break;
 	}
-	
+
 	var gyroSensitivity = 0.0;
 	switch (bytes[18]&0xF0) {
 		case 0x10:	// GYRO_SENSITIVITY_245DPS
@@ -106,7 +105,7 @@ function DecodeLSM9DS1Sensor(bytes) {
 		default:
 			break;
 	}
-	
+
 	var magneticSensitivity = 0.0;
 	switch (bytes[19]&0x0F) {
 		case 0x01:	// MAGNETIC_SENSITIVITY_4GAUSS
@@ -122,10 +121,9 @@ function DecodeLSM9DS1Sensor(bytes) {
 			magneticSensitivity = 0.58;
 			break;
 		default:
-			break;	
+			break;
 	}
-	
-	
+
 	return {
 		acceleration_x: rawAccelX*accelSensitivty/1000.0,
 		acceleration_y: rawAccelY*accelSensitivty/1000.0,
@@ -145,7 +143,7 @@ function DecodeSHT30Sensor(bytes) {
 		return {
 			error: "payload length is not correct size",
 			port: port,
-			length: bytes.length 
+			length: bytes.length
 		};
 	}
 	var tempReading = convertTwoBytesToSignedInt(bytes[0], bytes[1]);
@@ -154,7 +152,7 @@ function DecodeSHT30Sensor(bytes) {
 	var heaterStatus = Boolean((bytes[4]&0x40) > 0);
 	var humidityTrackingAlert = Boolean((bytes[4]&0x20) > 0);
 	var temperatureTrackingAlert = Boolean((bytes[4]&0x10) > 0);
-	
+
 	return {
 		temperature: (-45.0 + 175.0*tempReading/65535.0),
 		humidity: (100.0*humidityReading/65535.0),
@@ -171,7 +169,7 @@ function DecodeSTS21Sensor(bytes) {
 		return {
 			error: "payload length is not correct size",
 			port: port,
-			length: bytes.length 
+			length: bytes.length
 		};
 	}
 	var tempReading = convertTwoBytesToSignedInt(bytes[0], bytes[1]);
@@ -194,11 +192,11 @@ function DecodeSTS21Sensor(bytes) {
 			measurementResolutionBits = 0;
 			break;
 	}
-	
+
 	var temperature = -46.85 + 175.72*tempReading/65536.0;
 	var endOfBattery = Boolean(statusByte&0x40 > 0);
 	var onChipHeaterEnabled = Boolean(statusByte&0x04 > 0);
-	
+
 	return {
 		temperature: temperature,
 		end_of_battery: endOfBattery,
@@ -262,7 +260,7 @@ function ConverIIRCoefSetting(setting) {
 		default:
 			return -1;
 			break;
-	}	
+	}
 }
 function DecodeBME680Sensor(bytes) {
 	// BME680 Sensor
@@ -270,7 +268,7 @@ function DecodeBME680Sensor(bytes) {
 		return {
 			error: "payload length is not correct size",
 			port: port,
-			length: bytes.length 
+			length: bytes.length
 		};
 	}
 
@@ -304,7 +302,7 @@ function DecodeSI1132Sensor(bytes) {
 		return {
 			error: "payload length is not correct size",
 			port: port,
-			length: bytes.length 
+			length: bytes.length
 		};
 	}
 
@@ -324,7 +322,7 @@ function DecodeCommandStatusResponse(bytes) {
 		return {
 			error: "payload length is not correct size",
 			port: port,
-			length: bytes.length 
+			length: bytes.length
 		};
 	}
 	var status_name = "";
@@ -334,7 +332,7 @@ function DecodeCommandStatusResponse(bytes) {
 			break;
 		case 1:
 			status_name = "Bad Data Length";
-			break;			
+			break;
 		case 2:
 			status_name = "Unknown Command";
 			break;

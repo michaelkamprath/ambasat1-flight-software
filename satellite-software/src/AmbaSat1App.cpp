@@ -365,7 +365,7 @@ void AmbaSat1App::processQueuedCommand(void)
 #if LOG_LEVEL >= LOG_LEVEL_INFO
     PRINT_INFO(F("  Sending command response payload = "));
     print_buffer(replyBuffer, 3);
-#endif 
+#endif
 
     // LMIC seems to crash here if we previously just recieved a downlink AND
     // there are any pending data in the Serial queue. So flush the Serial queue.
