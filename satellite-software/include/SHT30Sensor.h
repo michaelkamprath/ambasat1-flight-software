@@ -30,6 +30,14 @@ public:
     virtual uint8_t getMeasurementBufferSize() const            { return 5; }
     virtual uint8_t getPort() const                             { return 3; }
 
+    //
+    // Sensor Configuration Delegate
+    //
+
+    virtual uint8_t configBlockSize( void ) const;
+    virtual void setDefaultValues(void);
+    virtual void loadConfigValues(void);
+    virtual void writeConfigToBuffer( uint8_t* bufferBaseAddress) const;
 };
 
 #endif // __SHT30Sensor__

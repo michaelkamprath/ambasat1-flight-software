@@ -125,4 +125,22 @@ const uint8_t* STS21Sensor::getCurrentMeasurementBuffer(void)
     return _buffer;
 }
 
+
+uint8_t STS21Sensor::configBlockSize( void ) const
+{
+    return 0;
+}
+
+void STS21Sensor::setDefaultValues(void)
+{
+}
+
+void STS21Sensor::loadConfigValues(void)
+{
+}
+
+void STS21Sensor::writeConfigToBuffer( uint8_t* bufferBaseAddress) const
+{
+}
+
 #endif //AMBASAT_MISSION_SENSOR
