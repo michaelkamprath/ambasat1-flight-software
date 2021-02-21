@@ -122,6 +122,12 @@ The following variables will be able to be configured for the LSM9DS1 sensor:
 | Set default | `0x03` | Set all LSM9DS1 settings to defaults | N/A |
 
 #### Mission Sensor Commands
+##### Sensor 1 - SHT30
+The following variables will be able to be configured for the SHT30 sensor:
+
+| Command Title | Command ID |Command Data | Default Value |
+|:--|:-:|:--|:-:|
+| Set Heater Enable | `0x01` | One byte, indicating the heater status:<br><br>`0x01` - On<br>`0x00` - Off<br><br>Note that heater is intended for testing purposes and has no real purpose in flight operations. | `0x00`
 
 ##### Sensor 3 - BME680
 The following variables will be able to be configured for the BME680 sensor:

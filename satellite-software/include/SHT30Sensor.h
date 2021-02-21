@@ -7,6 +7,8 @@ class SHT30Sensor : public SensorBase
 {
     uint8_t _buffer[5];
 
+    bool _enableHeater;
+
     bool begin(void);
     void reset(void);
 
@@ -38,6 +40,16 @@ public:
     virtual void setDefaultValues(void);
     virtual void loadConfigValues(void);
     virtual void writeConfigToBuffer( uint8_t* bufferBaseAddress) const;
+
+    bool isHeaterEnabled(void) const        { return _enableHeater; }
+    void setIsHeaterEnabled(bool setting);
+
+#ifdef ENABLE_AMBASAT_COMMANDS
+    // handles a command payload.
+    virtual uint8_t handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen);
+
+#endif
+
 };
 
 #endif // __SHT30Sensor__

@@ -46,7 +46,8 @@
 #define SHT30_CRC_POLYNOMIAL        0x131   // P(x) = x^8 + x^5 + x^4 + 1 = 100110001
 
 SHT30Sensor::SHT30Sensor(PersistedConfiguration& config)
-    :   SensorBase(config)
+    :   SensorBase(config),
+        _enableHeater(false)
 {
     if (!begin())
     {
@@ -147,6 +148,18 @@ void SHT30Sensor::reset(void)
         return;
     }
     delay(15);
+    // after reset, enable heater as configured
+    if (isHeaterEnabled()) {
+        if (sendCommand(SHT30_CMD_HEATER_ENABLE, true)) {
+            PRINTLN_DEBUG(F("SHT30 heater is enabled"));
+        } else {
+            PRINTLN_ERROR(F("ERROR unable to enable SHT30 heater"));
+        }
+    } else {
+        if (!sendCommand(SHT30_CMD_HEATER_DISABLE, true)) {
+            PRINTLN_ERROR(F("ERROR unable to disable SHT30 heater"));
+        }
+    }
 }
 
 void SHT30Sensor::setup(void)
@@ -195,8 +208,7 @@ const uint8_t* SHT30Sensor::getCurrentMeasurementBuffer(void)
     temperature = (temperature*9.0/5.0) + 32.0;
 #endif
 
-
-    PRINT_DEBUG(F("    SHT30 readings are: temperature = "));
+    PRINT_DEBUG(F("  SHT30 readings are: temperature = "));
     PRINT_DEBUG(temperature);
 #if LOG_CELSIUS_TEMP == 0
     PRINT_DEBUG(F(" °F, humidity = "));
@@ -235,19 +247,63 @@ const uint8_t* SHT30Sensor::getCurrentMeasurementBuffer(void)
     return _buffer;
 }
 
+//
+// Sensor Configuration Delegate
+//
+
+#define OFFSET_HEATER_ENABLE                0       // 1 byte
+
+#define CONFIG_SHT30_SENSOR_BLOCK_SIZE      1
+
 uint8_t SHT30Sensor::configBlockSize( void ) const
 {
-    return 0;
+    return CONFIG_SHT30_SENSOR_BLOCK_SIZE;
 }
 
 void SHT30Sensor::setDefaultValues(void)
 {
+    setIsHeaterEnabled(false);
 }
 
 void SHT30Sensor::loadConfigValues(void)
 {
+    _enableHeater = (eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_HEATER_ENABLE)) > 0);
 }
 
 void SHT30Sensor::writeConfigToBuffer( uint8_t* bufferBaseAddress) const
 {
+    bufferBaseAddress[OFFSET_HEATER_ENABLE] = (_enableHeater ? 1 : 0);
 }
+
+void SHT30Sensor::setIsHeaterEnabled(bool setting)
+{
+    uint8_t eeprom_value = (setting ? 1 : 0);
+    eeprom_update_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_HEATER_ENABLE), eeprom_value);
+    _enableHeater = setting;
+}
+
+#ifdef ENABLE_AMBASAT_COMMANDS
+uint8_t SHT30Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen)
+{
+    if (command == 0x01) {
+        // set heater status
+        if (recievedDataLen != 1) {
+            return CMD_STATUS_BAD_DATA_LEN;
+        }
+        bool enable = (*recievedData) > 0;
+
+        PRINT_DEBUG(F("  Heater enable = "));
+        PRINT_DEBUG(enable);
+        PRINT_DEBUG(F("\n"));
+
+        setIsHeaterEnabled(enable);
+
+        this->_config.updateCRC();
+        // the heater configuration gets applied in the sensor reset
+        reset();
+        return CMD_STATUS_SUCCESS;
+    }
+
+    return CMD_STATUS_UNKNOWN_CMD;
+}
+#endif //ENABLE_AMBASAT_COMMANDS
