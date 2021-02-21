@@ -64,9 +64,9 @@ SHT30Sensor::~SHT30Sensor()
 
 bool SHT30Sensor::sendCommand(uint16_t cmd, bool acceptNACKAtEnd )
 {
-    // when sending commands without clock stretching, the SHT30 will respond with a NACK rather than 
+    // when sending commands without clock stretching, the SHT30 will respond with a NACK rather than
     // and ACK. This generates and error = 3 in the Wire library when ending transimission. The argument
-    // acceptNACKAtEnd determines if the we expect an NACK in repsonse, and then tell SensorBase that getting a 
+    // acceptNACKAtEnd determines if the we expect an NACK in repsonse, and then tell SensorBase that getting a
     // NACK on data transfer is OK.
     uint8_t buffer[2];
     buffer[0] = cmd >> 8;
@@ -99,7 +99,7 @@ uint16_t  SHT30Sensor::readStatus(void)
     return statusValue;
 }
 
-// returns true if the alert status for brownout reboots. In such a 
+// returns true if the alert status for brownout reboots. In such a
 // case, the sensor configuration would need to be reloaded.
 bool SHT30Sensor::checkRestartAlertStatus(void)
 {
@@ -188,14 +188,24 @@ const uint8_t* SHT30Sensor::getCurrentMeasurementBuffer(void)
     uint16_t temperatureReading = (uint16_t)localBuffer[0]*256 + localBuffer[1];
     uint16_t humidityReading = (uint16_t)localBuffer[3]*256 + localBuffer[4];
 
+#if LOG_LEVEL >= LOG_LEVEL_DEBUG
     float temperature = -45.0 + 175.0*((float)temperatureReading)/65535.0;
     float humidity = 100.0*((float)humidityReading)/65535.0;
+#if LOG_CELSIUS_TEMP == 0
+    temperature = (temperature*9.0/5.0) + 32.0;
+#endif
+
 
     PRINT_DEBUG(F("    SHT30 readings are: temperature = "));
     PRINT_DEBUG(temperature);
+#if LOG_CELSIUS_TEMP == 0
+    PRINT_DEBUG(F(" °F, humidity = "));
+#else
     PRINT_DEBUG(F(" °C, humidity = "));
+#endif
     PRINT_DEBUG(humidity);
     PRINT_DEBUG(F("%\n"));
+#endif
 
     //
     // Buffer format is:
@@ -208,7 +218,7 @@ const uint8_t* SHT30Sensor::getCurrentMeasurementBuffer(void)
     //          bit 5 = RH Tracking Alert
     //          bit 4 = Temp Tracking Alert
     //          bits 3-0 = reserved
-    //  Total byts = 5
+    //  Total bytes = 5
     //
     uint16_t status = readStatus();
     hton_int16(temperatureReading, &_buffer[0]);
