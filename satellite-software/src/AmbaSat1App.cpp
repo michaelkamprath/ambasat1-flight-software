@@ -232,12 +232,12 @@ void AmbaSat1App::loop()
     for (int i=0; i < _config.getUplinkSleepCycles(); i++)
     {
         LowPower.powerDown(SLEEP_8S, ADC_OFF, BOD_OFF);    //sleep 8 seconds * sleepcycles
-    }   
+    }
 }
 
 void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
 {
-    // wait for any in process transmission to end. This really shouldn't happen, but can 
+    // wait for any in process transmission to end. This really shouldn't happen, but can
     // if the prior transmission received an downlink requiring an ACK.
     if ((LMIC.opmode&0x00FF) != OP_NONE) {
         PRINTLN_INFO(F("  Waiting on prior transmission ..."));
@@ -261,7 +261,7 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
     Serial.flush();
 #endif
 
-    // LMIC seems to crash here if we previously just recieved a downlink AND
+    // LMIC seems to crash here if we previously just received a downlink AND
     // there are any pending data in the Serial queue. So flush the Serial queue.
     Serial.flush();
     LMIC_setTxData2(
@@ -290,16 +290,16 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
 }
 
 #ifdef ENABLE_AMBASAT_COMMANDS
-void AmbaSat1App::queueCommand(uint8_t port, uint8_t* recievedData, uint8_t recievedDataLen)
+void AmbaSat1App::queueCommand(uint8_t port, uint8_t* receivedData, uint8_t receivedDataLen)
 {
-    if ((_queuedCommandPort == 0xFF) && (recievedDataLen <= QUEUED_COMMAND_BUFFER_SIZE )) {
+    if ((_queuedCommandPort == 0xFF) && (receivedDataLen <= QUEUED_COMMAND_BUFFER_SIZE )) {
         _queuedCommandPort = port;
-        memcpy(_queuedCommandDataBuffer, recievedData, recievedDataLen);
-        _queuedCommandDataLength = recievedDataLen;
+        memcpy(_queuedCommandDataBuffer, receivedData, receivedDataLen);
+        _queuedCommandDataLength = receivedDataLen;
         PRINT_DEBUG(F("  queued command on port "));
         PRINT_DEBUG(port);
         PRINT_DEBUG(F(" with data len = "));
-        PRINT_DEBUG(recievedDataLen);
+        PRINT_DEBUG(receivedDataLen);
         PRINT_DEBUG(F("\n"));
     }
 }
@@ -312,7 +312,7 @@ void AmbaSat1App::processQueuedCommand(void)
     }
 
     // this method decodes the command header and routes the data to the appropriate handler
-    PRINT_DEBUG(F("Recieved command on port "));
+    PRINT_DEBUG(F("received command on port "));
     PRINT_DEBUG(_queuedCommandPort);
     PRINT_DEBUG(F(", payload = "));
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
@@ -367,7 +367,7 @@ void AmbaSat1App::processQueuedCommand(void)
     print_buffer(replyBuffer, 3);
 #endif
 
-    // LMIC seems to crash here if we previously just recieved a downlink AND
+    // LMIC seems to crash here if we previously just received a downlink AND
     // there are any pending data in the Serial queue. So flush the Serial queue.
     Serial.flush();
 
@@ -392,7 +392,7 @@ void AmbaSat1App::processQueuedCommand(void)
     }
 }
 
-uint8_t AmbaSat1App::handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen)
+uint8_t AmbaSat1App::handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* receivedData, uint8_t receivedDataLen)
 {
     // Commands are identified in the first byte. Commands that the satellite supports:
     //
@@ -406,27 +406,27 @@ uint8_t AmbaSat1App::handleCommand(uint16_t cmdSequenceID, uint8_t command, uint
     //
 
     if (command == 0x01) {
-        return executeBlinkCmd(recievedData, recievedDataLen);
+        return executeBlinkCmd(receivedData, receivedDataLen);
     } else if (command == 0x02) {
-        return executeUplinkPatternCmd(recievedData, recievedDataLen);
+        return executeUplinkPatternCmd(receivedData, receivedDataLen);
     } else if (command == 0x03) {
-        return executeUplinkRateCmd(recievedData, recievedDataLen);
+        return executeUplinkRateCmd(receivedData, receivedDataLen);
     } else if (command == 0x04) {
-        return executeSetFrameCountCmd(recievedData, recievedDataLen);
+        return executeSetFrameCountCmd(receivedData, receivedDataLen);
     }
 
     return CMD_STATUS_UNKNOWN_CMD;
 }
 
-uint8_t AmbaSat1App::executeBlinkCmd(uint8_t* recievedData, uint8_t recievedDataLen)
+uint8_t AmbaSat1App::executeBlinkCmd(uint8_t* receivedData, uint8_t receivedDataLen)
 {
-    if (recievedDataLen != 1 ) {
+    if (receivedDataLen != 1 ) {
         return CMD_STATUS_BAD_DATA_LEN;
     }
 
-    uint8_t blinkCount = recievedData[0]&0x3F;
+    uint8_t blinkCount = receivedData[0]&0x3F;
     uint16_t blinkDurationMillis = 100;
-    switch (recievedData[0]&0xC0) {
+    switch (receivedData[0]&0xC0) {
         default:
         case 0x00:
             blinkDurationMillis = 100;
@@ -459,12 +459,12 @@ uint8_t AmbaSat1App::executeBlinkCmd(uint8_t* recievedData, uint8_t recievedData
     return CMD_STATUS_SUCCESS;
 }
 
-uint8_t AmbaSat1App::executeUplinkPatternCmd(uint8_t* recievedData, uint8_t recievedDataLen)
+uint8_t AmbaSat1App::executeUplinkPatternCmd(uint8_t* receivedData, uint8_t receivedDataLen)
 {
-    if (recievedDataLen != 1 ) {
+    if (receivedDataLen != 1 ) {
         return CMD_STATUS_BAD_DATA_LEN;
     }
-    UplinkPayloadType pattern = static_cast<UplinkPayloadType>(recievedData[0]);
+    UplinkPayloadType pattern = static_cast<UplinkPayloadType>(receivedData[0]);
     _config.setUplinkPattern(pattern, true);
 
     PRINT_DEBUG(F("  set uplink pattern: "));
@@ -473,13 +473,13 @@ uint8_t AmbaSat1App::executeUplinkPatternCmd(uint8_t* recievedData, uint8_t reci
     return CMD_STATUS_SUCCESS;
 }
 
-uint8_t AmbaSat1App::executeUplinkRateCmd(uint8_t* recievedData, uint8_t recievedDataLen)
+uint8_t AmbaSat1App::executeUplinkRateCmd(uint8_t* receivedData, uint8_t receivedDataLen)
 {
-    if (recievedDataLen != 1 ) {
+    if (receivedDataLen != 1 ) {
         return CMD_STATUS_BAD_DATA_LEN;
     }
 
-    uint8_t rateValue = recievedData[0];
+    uint8_t rateValue = receivedData[0];
     _config.setUplinkSleepCycles(rateValue, true);
     PRINT_DEBUG(F("  set uplink rate: "));
     PRINT_DEBUG(rateValue);
@@ -487,13 +487,13 @@ uint8_t AmbaSat1App::executeUplinkRateCmd(uint8_t* recievedData, uint8_t recieve
     return CMD_STATUS_SUCCESS;
 }
 
-uint8_t AmbaSat1App::executeSetFrameCountCmd(uint8_t* recievedData, uint8_t recievedDataLen)
+uint8_t AmbaSat1App::executeSetFrameCountCmd(uint8_t* receivedData, uint8_t receivedDataLen)
 {
-    if (recievedDataLen != 2 ) {
+    if (receivedDataLen != 2 ) {
         return CMD_STATUS_BAD_DATA_LEN;
     }
 
-    uint16_t frameCount = (uint16_t)ntoh_int16(recievedData);
+    uint16_t frameCount = (uint16_t)ntoh_int16(receivedData);
     _config.setUplinkFrameCount(frameCount, true);
     LMIC.seqnoUp = frameCount;
 
@@ -579,7 +579,7 @@ void onEvent(ev_t ev)
                 );
 
 #else
-                PRINTLN_DEBUG(F("WARNING Recieved a downlink but code is not enabled to process it."));
+                PRINTLN_DEBUG(F("WARNING received a downlink but code is not enabled to process it."));
 #endif
             }
             PRINTLN_ERROR(F("EV_TXCOMPLETE (includes RX windows)"));

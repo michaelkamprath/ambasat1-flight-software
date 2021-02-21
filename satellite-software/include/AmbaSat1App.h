@@ -25,7 +25,7 @@ private:
 
     uint8_t _buffer[SATELLITE_STATUS_BUFFER_SIZE];
     bool _sleeping;
-     
+
     void sendSensorPayload(LoRaPayloadBase& sensor);
 
     friend void onEvent (ev_t ev);
@@ -38,7 +38,7 @@ public:
     // standard Arduino functions
     void setup();
     void loop();
-    
+
     //
     // Methods for handling the "Statellite Status" payload
     virtual const uint8_t* getCurrentMeasurementBuffer(void);
@@ -48,19 +48,19 @@ public:
     int16_t readVccMilliVolts(void) const;
 
 
-    // 
+    //
     // Command Handling (if enabled)
     //
 #ifdef ENABLE_AMBASAT_COMMANDS
-    void queueCommand(uint8_t port, uint8_t* recievedData, uint8_t recievedDataLen);
+    void queueCommand(uint8_t port, uint8_t* receivedData, uint8_t receivedDataLen);
     void processQueuedCommand(void);
-    virtual uint8_t handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen);
+    virtual uint8_t handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* receivedData, uint8_t receivedDataLen);
 
-    uint8_t executeBlinkCmd(uint8_t* recievedData, uint8_t recievedDataLen);
-    uint8_t executeUplinkPatternCmd(uint8_t* recievedData, uint8_t recievedDataLen);
-    uint8_t executeUplinkRateCmd(uint8_t* recievedData, uint8_t recievedDataLen);
-    uint8_t executeSetFrameCountCmd(uint8_t* recievedData, uint8_t recievedDataLen);
-    
+    uint8_t executeBlinkCmd(uint8_t* receivedData, uint8_t receivedDataLen);
+    uint8_t executeUplinkPatternCmd(uint8_t* receivedData, uint8_t receivedDataLen);
+    uint8_t executeUplinkRateCmd(uint8_t* receivedData, uint8_t receivedDataLen);
+    uint8_t executeSetFrameCountCmd(uint8_t* receivedData, uint8_t receivedDataLen);
+
 private:
     #define QUEUED_COMMAND_BUFFER_SIZE MAX_LEN_FRAME
     uint8_t _queuedCommandPort;
