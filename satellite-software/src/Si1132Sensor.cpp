@@ -441,5 +441,5 @@ void Si1132Sensor::setIsInfraRedHighSignalRange(bool setting)
 {
     uint8_t eeprom_value = (setting ? 1 : 0);
     eeprom_update_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_HIGH_SIGNAL_IR), eeprom_value);
-    _highSignalVisible = setting;
+    _highSignalInfraRed = setting;
 }
