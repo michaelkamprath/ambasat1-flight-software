@@ -51,7 +51,7 @@ AmbaSat1App::AmbaSat1App()
 {
     if (AmbaSat1App::gApp != nullptr) {
         // complain loudly. Only one app object should be created.
-        PRINT_ERROR(F("ERROR multiple AmbaSat1App objects"));
+        PRINT_ERROR(F("ERROR multiple app objs"));
     }
     else {
         AmbaSat1App::gApp = this;
@@ -97,7 +97,7 @@ void AmbaSat1App::setup()
     LMIC_setSession (0x13, DEVADDR, nwkskey, appskey);
 
 #if defined(CFG_eu868)
-    PRINTLN_INFO(F("Transmitting using eu868 frequency plan"));
+    PRINTLN_INFO(F("Using eu868 frequency plan"));
     // Set up the channels used by the Things Network, which corresponds
     // to the defaults of most gateways. Without this, only three base
     // channels from the LoRaWAN specification are used, which certainly
@@ -121,7 +121,7 @@ void AmbaSat1App::setup()
     // frequency and support for class B is spotty and untested, so this
     // frequency is not configured here.
 #elif defined(CFG_us915)
-    PRINTLN_INFO(F("Transmitting using us915 frequency plan"));
+    PRINTLN_INFO(F("Using us915 frequency plan"));
     // NA-US channels 0-71 are configured automatically
     // but only one group of 8 should (a subband) should be active
     // TTN recommends the second sub band, 1 in a zero based count.
@@ -216,7 +216,7 @@ void AmbaSat1App::loop()
         }
     }
     // defer CRC calculation until subsequent frame count config being set
-    _config.setLastPayloadUplinked(lastPayload, false);
+    _config.setLastPayloadUplinked(lastPayload);
     //
     // technically there is some risk that the satellite will loose power between
     // the first transmission above and the last one, and in such case we will not
@@ -224,6 +224,7 @@ void AmbaSat1App::loop()
     // number of time we write to EEPROM.
     //
     _config.setUplinkFrameCount(LMIC.seqnoUp);
+    _config.updateCRC();
 
     // flush serial before going to sleep
     Serial.flush();
@@ -244,7 +245,7 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
         while((LMIC.opmode&0x00FF) != OP_NONE) {
             os_runloop_once();
         }
-        PRINTLN_INFO(F("    Complete."));
+        PRINTLN_INFO(F("   Complete"));
         // delay a little for radio to reset
         delay(2000);
     }
@@ -252,7 +253,7 @@ void AmbaSat1App::sendSensorPayload(LoRaPayloadBase& sensor)
     const uint8_t* data_ptr = sensor.getCurrentMeasurementBuffer();
 
     if (data_ptr == nullptr) {
-        PRINTLN_INFO(F("  Sensor data is NULL."));
+        PRINTLN_INFO(F("  Sensor data is NULL"));
         return;
     }
 #if LOG_LEVEL >= LOG_LEVEL_INFO
@@ -296,7 +297,7 @@ void AmbaSat1App::queueCommand(uint8_t port, uint8_t* receivedData, uint8_t rece
         _queuedCommandPort = port;
         memcpy(_queuedCommandDataBuffer, receivedData, receivedDataLen);
         _queuedCommandDataLength = receivedDataLen;
-        PRINT_DEBUG(F("  queued command on port "));
+        PRINT_DEBUG(F("  queued cmd on port "));
         PRINT_DEBUG(port);
         PRINT_DEBUG(F(" with data len = "));
         PRINT_DEBUG(receivedDataLen);
@@ -307,12 +308,12 @@ void AmbaSat1App::queueCommand(uint8_t port, uint8_t* receivedData, uint8_t rece
 void AmbaSat1App::processQueuedCommand(void)
 {
     if (_queuedCommandPort == 0xFF) {
-        PRINTLN_DEBUG(F("No queued commands to process"));
+        PRINTLN_DEBUG(F("No queued cmds to process"));
         return;
     }
 
     // this method decodes the command header and routes the data to the appropriate handler
-    PRINT_DEBUG(F("received command on port "));
+    PRINT_DEBUG(F("received cmd on port "));
     PRINT_DEBUG(_queuedCommandPort);
     PRINT_DEBUG(F(", payload = "));
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
@@ -348,7 +349,7 @@ void AmbaSat1App::processQueuedCommand(void)
             status = _missionSensor.handleCommand(cmdSeuqenceID, cmd, cmdData, cmdDataSize);
             break;
         default:
-            PRINT_ERROR(F("ERROR - received cmd on port = "));
+            PRINT_ERROR(F("ERROR received cmd on port "));
             PRINT_ERROR(_queuedCommandPort);
             PRINT_ERROR(F("\n"));
             break;
@@ -363,7 +364,7 @@ void AmbaSat1App::processQueuedCommand(void)
     replyBuffer[2] = status;
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
-    PRINT_INFO(F("  Sending command response payload = "));
+    PRINT_INFO(F("  Sending cmd response payload = "));
     print_buffer(replyBuffer, 3);
 #endif
 
@@ -441,9 +442,9 @@ uint8_t AmbaSat1App::executeBlinkCmd(uint8_t* receivedData, uint8_t receivedData
             blinkDurationMillis = 2000;
             break;
     }
-    PRINT_DEBUG(F("  BLINK! count = "));
+    PRINT_DEBUG(F("  BLINK! "));
     PRINT_DEBUG(blinkCount);
-    PRINT_DEBUG(F(", duration = "));
+    PRINT_DEBUG(F("x, dur = "));
     PRINT_DEBUG(blinkDurationMillis);
     PRINT_DEBUG(F(" ms\n"));
 
@@ -465,7 +466,8 @@ uint8_t AmbaSat1App::executeUplinkPatternCmd(uint8_t* receivedData, uint8_t rece
         return CMD_STATUS_BAD_DATA_LEN;
     }
     UplinkPayloadType pattern = static_cast<UplinkPayloadType>(receivedData[0]);
-    _config.setUplinkPattern(pattern, true);
+    _config.setUplinkPattern(pattern);
+    _config.updateCRC();
 
     PRINT_DEBUG(F("  set uplink pattern: "));
     PRINT_DEBUG(pattern);
@@ -480,7 +482,8 @@ uint8_t AmbaSat1App::executeUplinkRateCmd(uint8_t* receivedData, uint8_t receive
     }
 
     uint8_t rateValue = receivedData[0];
-    _config.setUplinkSleepCycles(rateValue, true);
+    _config.setUplinkSleepCycles(rateValue);
+    _config.updateCRC();
     PRINT_DEBUG(F("  set uplink rate: "));
     PRINT_DEBUG(rateValue);
     PRINT_DEBUG(F("\n"));
@@ -494,7 +497,8 @@ uint8_t AmbaSat1App::executeSetFrameCountCmd(uint8_t* receivedData, uint8_t rece
     }
 
     uint16_t frameCount = (uint16_t)ntoh_int16(receivedData);
-    _config.setUplinkFrameCount(frameCount, true);
+    _config.setUplinkFrameCount(frameCount);
+    _config.updateCRC();
     LMIC.seqnoUp = frameCount;
 
     PRINT_DEBUG(F("  reset uplink frame count: "));
@@ -506,104 +510,29 @@ uint8_t AmbaSat1App::executeSetFrameCountCmd(uint8_t* receivedData, uint8_t rece
 
 
 #endif
-// initial job
-static osjob_t initjob;
-
-void initfunc(osjob_t* j)
-{
-    // reset MAC state
-    LMIC_reset();
-    LMIC_setClockError(MAX_CLOCK_ERROR * 5 / 100);
-
-    // init done - onEvent() callback will be invoked...
-    PRINTLN_INFO(F("LMIC initFunc complete"));
-}
-
-// These callbacks are only used in over-the-air activation, so they are
-// left empty here (cannot be left out completely unless
-// DISABLE_JOIN is set in config.h, otherwise the linker will complain).
-void os_getArtEui (u1_t* buf) { }
-void os_getDevEui (u1_t* buf) { }
-void os_getDevKey (u1_t* buf) { }
 
 // =========================================================================================================================================
 // onEvent
 // =========================================================================================================================================
 void onEvent(ev_t ev)
 {
+    if (ev == EV_TXCOMPLETE) {
+        AmbaSat1App::gApp->_sleeping = true;
+        if (LMIC.dataLen > 0)
+        {
+    #ifdef ENABLE_AMBASAT_COMMANDS
+            AmbaSat1App::gApp->queueCommand(
+                LMIC.frame[LMIC.dataBeg-1],
+                &LMIC.frame[LMIC.dataBeg],
+                LMIC.dataLen
+            );
 
-    switch (ev)
-    {
-        case EV_SCAN_TIMEOUT:
-            // PRINTLN_DEBUG(F("EV_SCAN_TIMEOUT"));
-            break;
-        case EV_BEACON_FOUND:
-            // PRINTLN_DEBUG(F("EV_BEACON_FOUND"));
-            break;
-        case EV_BEACON_MISSED:
-            // PRINTLN_DEBUG(F("EV_BEACON_MISSED"));
-            break;
-        case EV_BEACON_TRACKED:
-            // PRINTLN_DEBUG(F("EV_BEACON_TRACKED"));
-            break;
-        case EV_JOINING:
-            // PRINTLN_DEBUG(F("EV_JOINING"));
-            break;
-        case EV_JOINED:
-            PRINTLN_DEBUG(F("EV_JOINED"));
-            // Disable link check validation (automatically enabled
-            // during join, but not supported by TTN at this time).
-            LMIC_setLinkCheckMode(0);
-            digitalWrite(LED_PIN, LOW);
-            break;
-        case EV_RFU1:
-            // PRINTLN_DEBUG(F("EV_RFU1"));
-            break;
-        case EV_JOIN_FAILED:
-            // PRINTLN_DEBUG(F("EV_JOIN_FAILED"));
-            break;
-        case EV_REJOIN_FAILED:
-            // PRINTLN_DEBUG(F("EV_REJOIN_FAILED"));
-            // Re-init
-            os_setCallback(&initjob, initfunc);
-            break;
-        case EV_TXCOMPLETE:
-            AmbaSat1App::gApp->_sleeping = true;
-            if (LMIC.dataLen > 0)
-            {
-#ifdef ENABLE_AMBASAT_COMMANDS
-                AmbaSat1App::gApp->queueCommand(
-                    LMIC.frame[LMIC.dataBeg-1],
-                    &LMIC.frame[LMIC.dataBeg],
-                    LMIC.dataLen
-                );
-
-#else
-                PRINTLN_DEBUG(F("WARNING received a downlink but code is not enabled to process it."));
-#endif
-            }
-            PRINTLN_ERROR(F("EV_TXCOMPLETE (includes RX windows)"));
-            Serial.flush();
-            break;
-        case EV_LOST_TSYNC:
-            // PRINTLN_DEBUG(F("EV_LOST_TSYNC"));
-            break;
-        case EV_RESET:
-            // PRINTLN_DEBUG(F("EV_RESET"));
-            break;
-        case EV_RXCOMPLETE:
-            // data received in ping slot
-            // PRINTLN_DEBUG(F("EV_RXCOMPLETE"));
-            break;
-        case EV_LINK_DEAD:
-            // PRINTLN_DEBUG(F("EV_LINK_DEAD"));
-            break;
-        case EV_LINK_ALIVE:
-            // PRINTLN_DEBUG(F("EV_LINK_ALIVE"));
-            break;
-        default:
-            PRINTLN_DEBUG(F("Unknown event"));
-            break;
+    #else
+            PRINTLN_DEBUG(F("WARNING received a downlink but code is not enabled to process it."));
+    #endif
+        }
+        PRINTLN_ERROR(F("EV_TXCOMPLETE (includes RX windows)"));
+        Serial.flush();
     }
 }
 
@@ -635,7 +564,7 @@ void VoltageSensor::setup(void)
   ADCSRA = (1 << ADEN)
          | (0 << ADSC)
          | (0 << ADATE)
-         | (1 << ADPS2)|(0 << ADPS1)|(1 << ADPS0);  
+         | (1 << ADPS2)|(0 << ADPS1)|(1 << ADPS0);
   ADCSRA |= (1 << ADSC);         // start dummy conversion
   while (ADCSRA & (1 << ADSC));  // wait for dummy to finish
 }
@@ -650,7 +579,7 @@ int16_t VoltageSensor::readVccMilliVolts(void) const
     ADCSRA |= (1 << ADSC);        // start conversion
     while (ADCSRA & (1 << ADSC)); // wait to finish
 
-    int16_t volts = (1100UL*1023/ADC);     // AVcc = Vbg/ADC*1023 = 1.1V*1023/ADC 
+    int16_t volts = (1100UL*1023/ADC);     // AVcc = Vbg/ADC*1023 = 1.1V*1023/ADC
     return volts;
 }
 #else

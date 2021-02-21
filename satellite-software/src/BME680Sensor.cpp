@@ -55,7 +55,7 @@ BME680Sensor::BME680Sensor(PersistedConfiguration& config)
     :   SensorBase(config),
         _sensorConfigured(false),
         _measurementCompletionMillis(0)
-{   
+{
     if (!begin())
     {
         PRINTLN_ERROR(F("ERROR unable to init BME680"));
@@ -78,12 +78,10 @@ bool BME680Sensor::begin(void)
         return false;
     }
     if (chip_id != 0x61) {
-        PRINT_ERROR(F("ERROR Found BME680 with wrong chip ID"));
+        PRINT_ERROR(F("ERROR BME680 wrong chip ID"));
         return false;
     }
-    PRINT_INFO(F("Found BME680 with chip ID = 0x"));
-    PRINT_HEX_INFO(chip_id);
-    PRINT_INFO(F("\n"));
+    PRINTLN_INFO(F("Found BME680"));
     return true;
 }
 
@@ -99,7 +97,7 @@ void BME680Sensor::reset(void)
 
 void BME680Sensor::setup(void)
 {
-    PRINTLN_DEBUG(F("Configuring BME680"));
+    PRINTLN_DEBUG(F("Setup BME680"));
 
     setSensorConfig();
 
@@ -111,32 +109,32 @@ void BME680Sensor::setSensorConfig(void){
     uint8_t tempOS = ((uint8_t)getTemperatureOversampling()) << BME680_TEMPERATURE_OS_SHIFT;
     uint8_t humidOS = ((uint8_t)getHumidityOversampling()) << BME680_HUMIDITY_OS_SHIFT;
     uint8_t pressureOS = ((uint8_t)getPressureOversampling()) << BME680_PRESSURE_OS_SHIFT;
-  
+
     if (!updateRegister(BME680_ctrl_hum_REG, BME680_HUMIDITY_OS_MASK, humidOS)) {
-        PRINTLN_DEBUG(F("ERROR setting humid OS"));
+        PRINTLN_DEBUG(F("ERROR set humid OS"));
         return;
     }
     if (!updateRegister(BME680_ctrl_meas_REG, BME680_TEMPERATURE_OS_MASK|BME680_PRESSURE_OS_MASK, tempOS|pressureOS )) {
-        PRINTLN_DEBUG(F("ERROR setting temp or press OS"));
+        PRINTLN_DEBUG(F("ERROR set temp or press OS"));
         return;
     }
 
     // Select IIR filter for temperature sensor
     uint8_t iirCoef = (uint8_t)getIIRFilterCoef() << BME680_IIR_FILTER_COEF_SHIFT;
     if (!updateRegister(BME680_config_REG, BME680_IIR_FILTER_COEF_MASK, iirCoef)) {
-        PRINTLN_DEBUG(F("ERROR setting IIR"));
+        PRINTLN_DEBUG(F("ERROR set IIR"));
         return;
     }
 
     // Define heater-on time
     if (!writeRegister(BME680_gas_wait_0_REG, calculateHeaterDuration(getGasHeatDuration()))) {
-        PRINTLN_DEBUG(F("ERROR setting heater time"));
-        return;    
+        PRINTLN_DEBUG(F("ERROR set heat time"));
+        return;
     }
 
-    // Enable gas coversion 
+    // Enable gas coversion
     updateTemperatureTargetResistance(getGasHeaterTemperature(), 25);
- 
+
     // Select index of heater set-point and turn on gas
     updateRegister(BME680_ctrl_gas_1_REG, BME680_nb_conv_MASK | BME680_run_gas_MASK, 0 | BME680_run_gas_ON ); // index 0 & on gas heater
 }
@@ -164,7 +162,7 @@ bool BME680Sensor::updateTemperatureTargetResistance(int16_t target_temp, int16_
     // TODO read ambient temperature from sensor
     uint8_t res_heat_x;
     if (!calculateTemperatureTargetResistance(target_temp, amb_temp, res_heat_x)) {  // target 300 degrees
-        PRINTLN_DEBUG(F("ERROR calculating res_reat_x"));
+        PRINTLN_DEBUG(F("ERROR calc res_reat_x"));
         return false;
     }
 
@@ -227,7 +225,7 @@ void BME680Sensor::startMeasurementProcess(void)
     if (isActive()) {
         // Trigger forced mode measurement
         if (!updateRegister(BME680_ctrl_meas_REG, 0b00000011, 0x01)) { // forced mode
-            PRINTLN_ERROR(F("ERROR starting BME660"));
+            PRINTLN_ERROR(F("ERROR start BME660"));
             return;
         }
     }
@@ -254,23 +252,23 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
 
     uint8_t reg_value;
     if (!readRegister(BME680_STATUS_REG, reg_value)) {
-        PRINTLN_ERROR(F("ERROR reading BME680 status"));
+        PRINTLN_ERROR(F("ERROR read BME680 status"));
         return nullptr;
     }
 
     bool isDone = ((reg_value&0b0010000) == 0);
     if (!isDone) {
-        PRINT_DEBUG(F("    waiting for BMR680"));
+        PRINT_DEBUG(F("  waiting BME680"));
         while (!isDone) {
             PRINT_DEBUG(F("."));
             if (!readRegister(BME680_STATUS_REG, reg_value)) {
-                PRINTLN_ERROR(F("ERROR reading BME680 status"));
+                PRINTLN_ERROR(F("ERROR reading BME680"));
                 return nullptr;
             }
             isDone = ((reg_value&0b0010000) == 0);
             delay(1);
         }
-        PRINTLN_DEBUG(F("\n    BME680 done."));
+        PRINTLN_DEBUG(F("\n  BME680 done"));
     }
 
     // get temp, pressure, and humidity ADC values. The buffer map is
@@ -294,7 +292,7 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     readRegisters(0x2A,&adc_buffer[8], 2);
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
-    PRINT_DEBUG(F("    ADC = "));
+    PRINT_DEBUG(F("  ADC = "));
     print_buffer(adc_buffer, 8);
 #endif
 
@@ -304,20 +302,20 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     int32_t hum_comp = calibratedHumidityReading(adc_buffer[6], adc_buffer[7], temp_comp);
     int32_t gas_res = calibratedGasResistance(adc_buffer[8], adc_buffer[9]);
 
-    PRINT_DEBUG(F("    calibrate temp = "));
+    PRINT_DEBUG(F("  temp = "));
     PRINT_DEBUG( temp_comp );
-    PRINT_DEBUG(F(", normalize temp = "));
+    PRINT_DEBUG(F(", norm temp = "));
 #if LOG_CELSIUS_TEMP == 0
     PRINT_DEBUG( (((float)temp_comp*9.0/5.0/100.0) + 32.0) );
-    PRINT_DEBUG(F(" °F, pressure = "));
+    PRINT_DEBUG(F(" °F, pres = "));
 #else
     PRINT_DEBUG((float)temp_comp/100.0);
     PRINT_DEBUG(F(" °C, pressure = "));
 #endif
     PRINT_DEBUG(press_comp);
-    PRINT_DEBUG(F(", humidity = "));
+    PRINT_DEBUG(F(", hum = "));
     PRINT_DEBUG(hum_comp);
-    PRINT_DEBUG(F(", gas ohms = "));
+    PRINT_DEBUG(F(", gas Ω = "));
     PRINT_DEBUG(gas_res);
     PRINT_DEBUG(F("\n"));
 
@@ -563,12 +561,19 @@ void BME680Sensor::setDefaultValues(void)
 
 void BME680Sensor::loadConfigValues(void)
 {
-    _temperatureOversampling = (BME680SensorOversamplingSetting)eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_TEMP_OVERSAMPLING));
-    _humidityOversampling = (BME680SensorOversamplingSetting)eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_HUMIDITY_OVERSAMPLING));
-    _pressureOversampling = (BME680SensorOversamplingSetting)eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_PRESSURE_OVERSAMPLING));
-    _iirCoefSetting = (BME680IIRFilterCoefSetting)eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_IIR_COEF));
-    _gasProfile0_duration = (uint16_t)eeprom_read_word((uint16_t *)(getEEPROMBaseAddress()+OFFSET_GAS_HEAT_DURATION));
-    _gasProfile0_targetTemp = (uint16_t)eeprom_read_word((uint16_t *)(getEEPROMBaseAddress()+OFFSET_GAS_HEAT_TEMP));
+    // the following compile check ensures that the payload buffer is large enough to be used here
+    #if BME680_RESULTS_BUFFER_SIZE < CONFIG_BME680SENSOR_BLOCK_SIZE
+    #error Cannot reuse BME680 results buffer to load configuration because it is too small
+    #else
+    // this approach reduces code size. Reusing payload buffer to conserve memory.
+    eeprom_read_block(_buffer, (uint8_t *)getEEPROMBaseAddress(), CONFIG_BME680SENSOR_BLOCK_SIZE);
+    _temperatureOversampling = (BME680SensorOversamplingSetting)_buffer[OFFSET_TEMP_OVERSAMPLING];
+    _humidityOversampling = (BME680SensorOversamplingSetting)_buffer[OFFSET_HUMIDITY_OVERSAMPLING];
+    _pressureOversampling = (BME680SensorOversamplingSetting)_buffer[OFFSET_PRESSURE_OVERSAMPLING];
+    _iirCoefSetting = (BME680IIRFilterCoefSetting)_buffer[OFFSET_IIR_COEF];
+    memcpy(&_gasProfile0_duration, &_buffer[OFFSET_GAS_HEAT_DURATION], sizeof(uint16_t));
+    memcpy(&_gasProfile0_targetTemp, &_buffer[OFFSET_GAS_HEAT_TEMP], sizeof(uint16_t));
+    #endif
 }
 
 void BME680Sensor::writeConfigToBuffer( uint8_t* bufferBaseAddress) const

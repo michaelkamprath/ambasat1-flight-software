@@ -60,6 +60,7 @@ void PersistedConfiguration::init(void)
     }
 
     setRebootCount(_rebootCount+1);
+    updateCRC();
 }
 
 void PersistedConfiguration::setSensorConfigDelegates(SensorConfigurationDelegate* LSM9DS1Delegate, SensorConfigurationDelegate* missionSensorDelegate)
@@ -129,11 +130,11 @@ void PersistedConfiguration::resetToDefaults(void)
 {
     PRINTLN_DEBUG(F("Setting default device configuration"));
 
-    setRebootCount(0, false);
-    setUplinkFrameCount(0, false);
-    setUplinkPattern(0, false);
-    setLastPayloadUplinked(MISSION_SENSOR_PAYLOAD, false);
-    setUplinkSleepCycles(75, false);
+    setRebootCount(0);
+    setUplinkFrameCount(0);
+    setUplinkPattern(0);
+    setLastPayloadUplinked(MISSION_SENSOR_PAYLOAD);
+    setUplinkSleepCycles(75);
 
     _LSM9DS1Delegate->setDefaultValues();
     _missionSensorDelegate->setDefaultValues();
@@ -148,22 +149,24 @@ void PersistedConfiguration::resetToDefaults(void)
 void PersistedConfiguration::loadAllCongigurations(void)
 {
     PRINTLN_INFO(F("Loading device configuration from EEPROM."));
+    uint8_t buffer[CONFIG_SATELLITE_BLOCK_SIZE];
+    eeprom_read_block(buffer, (uint8_t *)CONFIG_EEPROM_BASE_ADDR, CONFIG_SATELLITE_BLOCK_SIZE);
 
-    _rebootCount = eeprom_read_dword((const uint32_t*)(CONFIG_EEPROM_BASE_ADDR+OFFSET_BOOT_COUNT));
-    _uplinkFrameCount = eeprom_read_dword((const uint32_t*)(CONFIG_EEPROM_BASE_ADDR+OFFSET_UPLINK_FRAME_COUNT));
-    _uplinkPattern = eeprom_read_byte((uint8_t *)(CONFIG_EEPROM_BASE_ADDR+OFFSET_UPLINK_PATTERN));
-    _lastPayloadUplinked = static_cast<UplinkPayloadType>(eeprom_read_byte((uint8_t *)(CONFIG_EEPROM_BASE_ADDR+OFFSET_LAST_PAYLOAD_UPLINKED)));
-    _uplinkRateValue = eeprom_read_byte((uint8_t *)(CONFIG_EEPROM_BASE_ADDR+OFFSET_UPLINK_RATE_VALUE));
+    memcpy(&_rebootCount, &buffer[OFFSET_BOOT_COUNT], sizeof(uint32_t));
+    memcpy(&_uplinkFrameCount, &buffer[OFFSET_UPLINK_FRAME_COUNT], sizeof(uint32_t));
+    _uplinkPattern = buffer[OFFSET_UPLINK_PATTERN];
+    _lastPayloadUplinked = static_cast<UplinkPayloadType>(buffer[OFFSET_LAST_PAYLOAD_UPLINKED]);
+    _uplinkRateValue = buffer[OFFSET_UPLINK_RATE_VALUE];
 
     _LSM9DS1Delegate->loadConfigValues();
     _missionSensorDelegate->loadConfigValues();
 
     if (checkCRC()) {
-        PRINT_DEBUG(F("  Loaded configuration with:\n    reboot count: "));
+        PRINT_DEBUG(F("  Loaded configuration with:\n   reboot count: "));
         PRINT_DEBUG(_rebootCount);
-        PRINT_DEBUG(F("\n    uplink frame count: "));
+        PRINT_DEBUG(F("\n   uplink frame count: "));
         PRINT_DEBUG(_uplinkFrameCount);
-        PRINT_DEBUG(F("\n    sleep cycles: "));
+        PRINT_DEBUG(F("\n   sleep cycles: "));
         PRINT_DEBUG(_uplinkRateValue);
         PRINT_DEBUG(F("\n"));
     } else {
@@ -177,46 +180,31 @@ void PersistedConfiguration::loadAllCongigurations(void)
 // configuration setters
 //
 
-void PersistedConfiguration::setRebootCount(uint32_t rebootCount, bool calculateCRC) {
+void PersistedConfiguration::setRebootCount(uint32_t rebootCount) {
     eeprom_update_dword((uint32_t*)(CONFIG_EEPROM_BASE_ADDR+OFFSET_BOOT_COUNT), rebootCount);
     _rebootCount = rebootCount;
-    if (calculateCRC) {
-        updateCRC();
-    }
 }
 
-void PersistedConfiguration::setUplinkFrameCount(uint32_t frameCount, bool calculateCRC) {
+void PersistedConfiguration::setUplinkFrameCount(uint32_t frameCount) {
     eeprom_update_dword((uint32_t*)(CONFIG_EEPROM_BASE_ADDR+OFFSET_UPLINK_FRAME_COUNT), frameCount);
     _uplinkFrameCount = frameCount;
-    if (calculateCRC) {
-        updateCRC();
-    }
 }
-    
-void PersistedConfiguration::setUplinkPattern(uint8_t pattern, bool calculateCRC)
+
+void PersistedConfiguration::setUplinkPattern(uint8_t pattern)
 {
     eeprom_update_byte((uint8_t *)(CONFIG_EEPROM_BASE_ADDR+OFFSET_UPLINK_PATTERN), pattern);
     _uplinkPattern = pattern;
-    if (calculateCRC) {
-        updateCRC();
-    }
 }
 
-void PersistedConfiguration::setLastPayloadUplinked(UplinkPayloadType payload, bool calculateCRC)
+void PersistedConfiguration::setLastPayloadUplinked(UplinkPayloadType payload)
 {
     uint8_t eeprom_value = static_cast<uint8_t>(payload);
     eeprom_update_byte((uint8_t *)(CONFIG_EEPROM_BASE_ADDR+OFFSET_LAST_PAYLOAD_UPLINKED), eeprom_value);
     _lastPayloadUplinked = payload;
-    if (calculateCRC) {
-        updateCRC();
-    }
 }
 
-void PersistedConfiguration::setUplinkSleepCycles(uint8_t rateValue, bool calculateCRC)
+void PersistedConfiguration::setUplinkSleepCycles(uint8_t rateValue)
 {
     eeprom_update_byte((uint8_t *)(CONFIG_EEPROM_BASE_ADDR+OFFSET_UPLINK_RATE_VALUE), rateValue);
     _uplinkRateValue = rateValue;
-    if (calculateCRC) {
-        updateCRC();
-    }
 }

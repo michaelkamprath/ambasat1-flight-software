@@ -326,9 +326,15 @@ void LSM9DS1Sensor::setDefaultValues(void)
 }
 void LSM9DS1Sensor::loadConfigValues(void)
 {
-    _accelSensitivity = (AccelerationSensitivitySetting)eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_ACCELERATION_SENSITIVITY));
-    _gyroSensitivity = (GyroSensitivitySetting)eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_GYRO_SENSITIVITY));
-    _magneticSensitivity = (MagneticSensitivitySetting)eeprom_read_byte((uint8_t *)(getEEPROMBaseAddress()+OFFSET_MAGNETIC_SENSITIVITY));
+    #if LSM9DS1_RESULTS_BUFFER_SIZE < LSM9DS1_CONFIG_BLOCK_SIZE
+    #error Cannot reuse LSM9DS1 results buffer to load configuration because it is too small
+    #else
+    // this approach reduces code size. Reusing payload buffer to conserve memory.
+    eeprom_read_block(_buffer, (uint8_t *)getEEPROMBaseAddress(), LSM9DS1_CONFIG_BLOCK_SIZE);
+    _accelSensitivity = (AccelerationSensitivitySetting)_buffer[OFFSET_ACCELERATION_SENSITIVITY];
+    _gyroSensitivity = (GyroSensitivitySetting)_buffer[OFFSET_GYRO_SENSITIVITY];
+    _magneticSensitivity = (MagneticSensitivitySetting)_buffer[OFFSET_MAGNETIC_SENSITIVITY];
+    #endif
 }
 
 void LSM9DS1Sensor::writeConfigToBuffer(uint8_t* bufferBaseAddress) const

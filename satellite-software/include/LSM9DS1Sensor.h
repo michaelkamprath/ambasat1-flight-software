@@ -51,11 +51,11 @@ private:
 
     bool begin(void);
     void end(void);
- 
+
     void setAccelFS(AccelerationSensitivitySetting config);
     void setGyroFS(GyroSensitivitySetting config);
     void setMagnetFS(MagneticSensitivitySetting config);
-    
+
     void setSensorConfig(void);
 protected:
     virtual uint8_t i2cAutoIncrementBit(void) const         { return 7; }

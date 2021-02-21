@@ -61,7 +61,7 @@ private:
     bool checkCRC(void) const;
 
     // this setter is private because no one should be setting it outside this class.
-    void setRebootCount(uint32_t rebootCount, bool updateCRC = true);
+    void setRebootCount(uint32_t rebootCount);
 public:
     PersistedConfiguration();
     void init(void);
@@ -78,16 +78,16 @@ public:
     uint32_t getRebootCount(void) const                     { return _rebootCount; }
 
     uint32_t getUplinkFrameCount(void) const                { return _uplinkFrameCount; }
-    void setUplinkFrameCount(uint32_t frameCount, bool updateCRC = true);
+    void setUplinkFrameCount(uint32_t frameCount);
 
     uint8_t getUplinkPattern(void) const                    { return _uplinkPattern; }
-    void setUplinkPattern(uint8_t pattern, bool updateCRC = true);
+    void setUplinkPattern(uint8_t pattern);
 
     UplinkPayloadType getLastPayloadUplinked(void) const    { return _lastPayloadUplinked; }
-    void setLastPayloadUplinked(UplinkPayloadType payload, bool updateCRC = true);
+    void setLastPayloadUplinked(UplinkPayloadType payload);
 
     uint8_t getUplinkSleepCycles(void) const                { return _uplinkRateValue; }
-    void setUplinkSleepCycles(uint8_t rateValue, bool updateCRC = true);
+    void setUplinkSleepCycles(uint8_t rateValue);
 };
 
 
