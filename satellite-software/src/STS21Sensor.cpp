@@ -4,8 +4,6 @@
 #include "Logging.h"
 #include "PersistedConfiguration.h"
 
-#if AMBASAT_MISSION_SENSOR == SENSOR_STS21
-
 #define STS21_CMD_GET_TEMPERATURE_NOHOLD        0b11110011
 #define STS21_CMD_SOFT_RESET                    0b11111110
 #define STS21_CMD_READ_REGISTER                 0b11100111
@@ -142,5 +140,3 @@ void STS21Sensor::loadConfigValues(void)
 void STS21Sensor::writeConfigToBuffer( uint8_t* bufferBaseAddress) const
 {
 }
-
-#endif //AMBASAT_MISSION_SENSOR

@@ -235,7 +235,7 @@ void BME680Sensor::startMeasurementProcess(void)
 
 uint16_t BME680Sensor::calculateMeasurmentDuration(void) const
 {
-    // TODO calculate more rpecise measurement delay. 
+    // TODO calculate more rpecise measurement delay.
     return 300;
 }
 
@@ -270,7 +270,7 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
             isDone = ((reg_value&0b0010000) == 0);
             delay(1);
         }
-        PRINTLN_DEBUG(F("\n    BME680 done.")); 
+        PRINTLN_DEBUG(F("\n    BME680 done."));
     }
 
     // get temp, pressure, and humidity ADC values. The buffer map is
@@ -293,8 +293,8 @@ const uint8_t* BME680Sensor::getCurrentMeasurementBuffer(void)
     readRegisters(0x1F,adc_buffer, 8);
     readRegisters(0x2A,&adc_buffer[8], 2);
 
-    PRINT_DEBUG(F("    ADC = "));
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
+    PRINT_DEBUG(F("    ADC = "));
     print_buffer(adc_buffer, 8);
 #endif
 
@@ -621,7 +621,7 @@ void BME680Sensor::setGasHeatTemperature(int16_t setting, uint8_t profile)
 
 #ifdef ENABLE_AMBASAT_COMMANDS
 uint8_t BME680Sensor::handleCommand(uint16_t cmdSequenceID, uint8_t command, uint8_t* recievedData, uint8_t recievedDataLen)
-{ 
+{
     if ((command >= 0x01)&&(command <= 0x03)) {
         if (recievedDataLen != 1) {
             return CMD_STATUS_BAD_DATA_LEN;
