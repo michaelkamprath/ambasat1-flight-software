@@ -15,7 +15,7 @@
 // This is not intended to be a robust driver for the LSM9DS1,
 // but instead provide the minimal functionality need for the AmbaSat-1.
 // Note that interpretation of the sensor reading is actually done
-// by the TTN payload decoder. What get collected here is the raw 
+// by the TTN payload decoder. What get collected here is the raw
 // sensor register readings.
 
 // accelerometer and gyroscope
@@ -41,6 +41,8 @@
 LSM9DS1Sensor::LSM9DS1Sensor(PersistedConfiguration& config)
     :   SensorBase(config)
 {
+    PRINTLN_DEBUG(F("Starting LSM9DS1 Sensor"));
+
     // Assumes Wire has been initialized by base class
 
     // Try to initialise and warn if we couldn't detect the chip
@@ -253,14 +255,14 @@ LSM9DS1Sensor::getCurrentMeasurementBuffer(void)
     }
 
     // gyro
-    if (!readRegisters(LSM9DS1_ADDRESS, LSM9DS1_OUT_X_G, (uint8_t*)gyroData, sizeof(gyroData))) 
+    if (!readRegisters(LSM9DS1_ADDRESS, LSM9DS1_OUT_X_G, (uint8_t*)gyroData, sizeof(gyroData)))
     {
         PRINTLN_ERROR(F("ERROR reading LSM9DS1 gyro data"));
         return nullptr;
     }
 
     // Magnetic
-    if (!readRegisters(LSM9DS1_ADDRESS_M, LSM9DS1_OUT_X_L_M, (uint8_t*)magneticData, sizeof(magneticData))) 
+    if (!readRegisters(LSM9DS1_ADDRESS_M, LSM9DS1_OUT_X_L_M, (uint8_t*)magneticData, sizeof(magneticData)))
     {
         PRINTLN_ERROR(F("ERROR reading LSM9DS1 magnetic data"));
         return nullptr;
