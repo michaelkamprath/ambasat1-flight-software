@@ -533,6 +533,9 @@ void onEvent(ev_t ev)
         }
         PRINTLN_ERROR(F("EV_TXCOMPLETE (includes RX windows)"));
         Serial.flush();
+    } else {
+        PRINT_INFO(F("Got LMIC event = "));
+        PRINTLN_INFO(ev);
     }
 }
 
